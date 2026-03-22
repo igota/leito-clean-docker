@@ -1,0 +1,896 @@
+/* ======================
+   RESET E BASE
+   ====================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+    background: #f9f9f9;
+    padding: 10px;
+}
+
+/* ======================
+   CONTAINER DOS CARDS
+   ====================== */
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* ======================
+   CARDS DE LIMPEZA
+   ====================== */
+.card-limpeza {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 350px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    border: 1px solid #e1e8ed;
+    text-align: center;
+}
+
+.card-limpeza:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Informações da limpeza */
+.card-limpeza p {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 5px 0;
+    width: 100%;
+    font-size: 20px;
+}
+
+.card-limpeza .titulo {
+    font-weight: bold;
+}
+
+.card-limpeza strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Container do tempo */
+.card-limpeza .tempo {
+    background: #3498db;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+/* Botão finalizar dentro do card */
+.card-limpeza .btn-finalizar {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: auto;
+}
+
+.card-limpeza .btn-finalizar:hover {
+    background: #c0392b;
+}
+
+/* ======================
+   BOTÃO NOVA LIMPEZA
+   ====================== */
+.btn-nova-limpeza {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 15px 25px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    transition: all 0.3s;
+    z-index: 100;
+}
+
+.btn-nova-limpeza:hover {
+    background: #219653;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
+}
+
+.btn-nova-limpeza.hidden {
+    display: none;
+}
+
+/* ======================
+   POPUPS
+   ====================== */
+.popup {
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+.oculto {
+    display: none !important;
+}
+
+.popup-conteudo {
+    position: relative;
+    background: white;
+    border-radius: 18px;
+    padding: 25px 50px;
+    max-width: 90%;
+    width: 450px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: popupEntrada 0.3s ease;
+}
+
+@keyframes popupEntrada {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.fechar-popup {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 30px;
+    font-weight: bold;
+    color: #777;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.fechar-popup:hover {
+    color: #e74c3c;
+}
+
+/* 🔹 Popup de confirmação */
+#popupConfirmacao {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+#popupConfirmacao .popup-conteudo {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    padding: 40px 50px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+    animation: aparecer 0.3s ease;
+}
+
+@keyframes aparecer {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 🔹 Texto de confirmação */
+#popupConfirmacao h3 {
+    margin-bottom: 25px;
+    font-size: 1.4rem;
+    color: #333;
+    line-height: 1.5;
+}
+
+.popup-conteudo p {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.popup-conteudo h3 {
+    font-size: 1.4em;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Input do cartão */
+#idcartaoFinalizarInput {
+    width: 100%;
+    font-size: 1.5em;
+    text-align: center;
+    margin: 10px 0;
+    padding: 5px;
+}
+
+/* Botões de confirmação */
+.botoes-confirmacao {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+#confirmarFim, #cancelarFim {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#confirmarFim {
+    background: #27ae60;
+    color: white;
+}
+
+#confirmarFim:hover {
+    background: #219653;
+}
+
+#confirmarFim:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#cancelarFim {
+    background: #e74c3c;
+    color: white;
+}
+
+#cancelarFim:hover {
+    background: #c0392b;
+}
+
+/* ======================
+   POPUP DE MENSAGEM
+   ====================== */
+.popup-mensagem {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+
+.popup-mensagem .popup-conteudo {
+    text-align: center;
+    
+}
+
+.popup-mensagem.oculto {
+    display: none;
+    opacity: 0;
+}
+#popupMensagem .popup-conteudo p {
+    font-size: 1.5rem !important;  /* Letra bem maior */
+    line-height: 1.4;
+    font-weight: 500;
+    
+}
+
+.popup-icone {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+
+
+#mensagemTexto {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 20px 0;
+    color: #333;
+    white-space: pre-line;
+    text-align: left;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+#fecharMensagemBtn {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#fecharMensagemBtn:hover {
+    background-color: #0056b3;
+}
+
+/* ======================
+   POPUP DE CONFIRMAÇÃO DE TEMPO (NOVO)
+   ====================== */
+.popup-confirmacao-tempo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.popup-confirmacao-tempo .popup-conteudo {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 450px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.popup-confirmacao-tempo h3 {
+    color: #0069d9;
+    margin-bottom: 20px;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.mensagem-tempo {
+    font-size: 20px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #e7f1ff;
+    border-radius: 10px;
+    color: #0069d9;
+    font-weight: 600;
+}
+
+.mensagem-aviso {
+    margin: 25px 0;
+    font-size: 18px;
+    color: #333;
+    line-height: 1.6;
+}
+
+.botoes-tempo {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.botoes-tempo button {
+    padding: 15px 35px;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.btn-cancelar-tempo {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-cancelar-tempo:hover {
+    background: #5a6268;
+}
+
+.btn-confirmar-tempo {
+    background: #28a745;
+    color: white;
+}
+
+.btn-confirmar-tempo:hover {
+    background: #218838;
+}
+
+/* ======================
+   AGUARDANDO VALIDAÇÃO
+   ====================== */
+.aguardando-validacao {
+    margin-top: 10px;
+    text-align: center;
+    padding: 10px;
+    background: #fff3cd;
+    border-radius: 8px;
+    border: 1px solid #ffeeba;
+}
+
+.aguardando-validacao p {
+    color: #856404;
+    font-weight: 600;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ffeeba;
+    border-top: 3px solid #856404;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.btn-validar {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.btn-validar:hover {
+    background: #219653;
+    transform: translateY(-1px);
+}
+
+/* ======================
+   HIGHLIGHT
+   ====================== */
+.highlight {
+    font-weight: bold;
+    color: #0069d9;
+    background: #e7f1ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 2px 0;
+}
+
+/* ======================
+   BANNER DE CONCLUSÃO
+   ====================== */
+.banner-conclusao {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: #27ae60;
+    color: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.5s;
+    text-align: center;
+}
+
+.banner-conclusao.ativo {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.banner-conteudo .icone {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.banner-conteudo .titulo {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.banner-conteudo .tempo {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Estilos específicos para o popup de confirmação de finalização */
+#popupConfirmacaoFinalizar .popup-conteudo {
+    text-align: center;
+    padding: 40px;
+    max-width: 450px;
+}
+
+#popupConfirmacaoFinalizar h3 {
+    color: #0069d9;
+    font-size: 28px;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+#popupConfirmacaoFinalizar .confirmacao-info {
+    margin: 25px 0;
+}
+
+#popupConfirmacaoFinalizar .confirmacao-tempo {
+    font-size: 22px;
+    color: #28a745;
+    background: #e7f1ff;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 15px 0;
+    font-weight: 600;
+}
+
+#popupConfirmacaoFinalizar .confirmacao-mensagem {
+    font-size: 18px;
+    color: #495057;
+    margin: 20px 0;
+    line-height: 1.6;
+}
+
+#popupConfirmacaoFinalizar .botoes-confirmacao-finalizar {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+#popupConfirmacaoFinalizar .botoes-confirmacao-finalizar button {
+    padding: 15px 35px;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+#popupConfirmacaoFinalizar .btn-cancelar {
+    background: #dc3545;
+    color: white;
+}
+
+#popupConfirmacaoFinalizar .btn-cancelar:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+#popupConfirmacaoFinalizar .btn-confirmar {
+    background: #28a745;
+    color: white;
+}
+
+#popupConfirmacaoFinalizar .btn-confirmar:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+
+
+/* Animação para destacar o tempo */
+@keyframes highlightPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); background: #cce5ff; }
+    100% { transform: scale(1); }
+}
+
+.confirmacao-tempo strong {
+    animation: highlightPulse 1s ease;
+    display: inline-block;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Popup Leitor de Cartão */
+#popupLeitorEnfermeiro .popup-conteudo {
+    text-align: center;
+    padding: 40px 30px;
+    max-width: 350px;
+    max-height: 400px;
+}
+
+#popupLeitorEnfermeiro h3 {
+    color: #0069d9;
+    font-size: 2.2rem;
+    margin: 20px 0 10px;
+}
+
+#popupLeitorEnfermeiro .mensagem-leitor {
+    font-size: 1.6rem;
+    color: #333;
+    margin: 10px 0 5px;
+}
+
+#popupLeitorEnfermeiro .instrucao {
+    font-size: 1.4rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* Container da imagem/leitor */
+.leitor-imagem {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* LED Vermelho no leitor */
+.led-vermelho {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: 8px;
+    height: 8px;
+    background: #ff0000;
+    border-radius: 50%;
+    box-shadow: 
+        0 0 5px #ff0000,
+        0 0 10px #ff0000,
+        0 0 15px #ff0000;
+    animation: piscarLed 1.5s ease-in-out infinite;
+}
+
+/* Texto RFID no leitor (opcional) */
+.leitor-texto {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #00ff00;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-family: monospace;
+    text-shadow: 0 0 5px #00ff00;
+}
+
+/* Ajuste no leitor-retangulo para posicionar o LED */
+.leitor-retangulo {
+    width: 65px;
+    height: 85px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 5px 0 #0a0a0a, 0 8px 12px rgba(0, 0, 0, 0.3);
+    border: 2px solid #333;
+    /* Para posicionar elementos dentro */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 0;
+}
+
+/* Onda de rádio (efeito de leitor ativo) */
+.onda-radio {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(0, 105, 217, 0.1);
+    animation: pulsarOnda 2s ease-out infinite;
+}
+
+.onda-radio::before,
+.onda-radio::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 105, 217, 0.3);
+    animation: pulsarOnda 2s ease-out infinite;
+}
+
+.onda-radio::after {
+    animation-delay: 0.5s;
+}
+
+/* Cartão sendo bipado */
+.cartao-bipando {
+    position: absolute;
+    font-size: 2.5rem;
+    right: -20px;
+    top: -10px;
+    animation: flutuar 1.5s ease-in-out infinite;
+    transform-origin: center;
+    z-index: 3;
+}
+
+/* Input oculto visualmente */
+.input-oculto {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+}
+
+/* Animações */
+@keyframes pulsarOnda {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes flutuar {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-10px) rotate(5deg);
+    }
+}
+
+/* Animação do LED piscando */
+@keyframes piscarLed {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 
+            0 0 5px #ff0000,
+            0 0 10px #ff0000,
+            0 0 15px #ff0000;
+    }
+    50% {
+        opacity: 0.5;
+        box-shadow: 
+            0 0 2px #ff0000,
+            0 0 5px #ff0000,
+            0 0 8px #ff0000;
+    }
+}
+
+
+/* ======================
+   RESPONSIVIDADE
+   ====================== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .cards-container {
+        padding: 10px;
+        gap: 15px;
+    }
+    
+    .card-limpeza {
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .btn-nova-limpeza {
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+    
+    .botoes-confirmacao {
+        flex-direction: column;
+    }
+    
+    .botoes-tempo {
+        flex-direction: column;
+    }
+    
+    .popup-confirmacao-tempo .popup-conteudo {
+        padding: 25px;
+        width: 90%;
+    }
+    
+    .popup-conteudo {
+        padding: 20px 25px;
+    }
+    
+    #popupConfirmacao .popup-conteudo {
+        padding: 25px 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-limpeza .tempo {
+        font-size: 20px;
+        padding: 12px;
+    }
+    
+    .card-limpeza .btn-finalizar {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+    
+    .popup-confirmacao-tempo h3 {
+        font-size: 24px;
+    }
+    
+    .mensagem-tempo {
+        font-size: 18px;
+    }
+    
+    .botoes-tempo button {
+        padding: 12px 25px;
+        font-size: 16px;
+    }
+}

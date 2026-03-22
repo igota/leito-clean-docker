@@ -1,0 +1,447 @@
+:root {
+    --menu-width: 120px !important;
+    --cor-primaria: rgb(1, 55, 87);
+    --fundo-base: #f4f8fb;
+}
+
+/* =========================
+   BODY
+========================= */
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    overflow: hidden; /* IMPEDE SCROLL NO BODY */
+    height: 100vh;
+}
+
+/* =========================
+   BODY COM SCROLL ATIVADO - APENAS QUANDO TIVER A CLASSE
+========================= */
+body.pagina-com-scroll {
+    overflow: auto; /* ATIVA SCROLL */
+    overflow-y: auto;
+}
+
+body.pagina-com-scroll .container-primario {
+    overflow: auto; /* HERDA SCROLL DO BODY */
+    height: auto;
+    min-height: 100vh;
+}
+
+body.pagina-com-scroll .container-secundario {
+    overflow: auto; /* PERMITE SCROLL INTERNO */
+    height: auto;
+    min-height: 100vh;
+}
+
+/* =========================
+   MENU
+========================= */
+/* Garantir que o menu lateral tenha um contexto de empilhamento adequado */
+.menu {
+    width: var(--menu-width, 280px);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: linear-gradient(180deg, var(--cor-primaria, #0d47a1) 0%, #1565c0 100%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    transition: width 0.3s ease;
+    
+    /* Cria um contexto de empilhamento */
+    isolation: isolate;
+}
+
+
+/* =========================
+   CONTAINER PRIMÁRIO (FUNDO)
+========================= */
+.container-primario {
+    background: linear-gradient(180deg, var(--cor-primaria, #0d47a1) 0%, #1565c0 100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    margin-left: var(--menu-width);
+    height: 100vh; /* ALTURA FIXA DA TELA */
+    padding: 12px 12px 12px 1px;
+    overflow: hidden; /* SEM SCROLL */
+    box-sizing: border-box;
+}
+
+/* =========================
+   CONTAINER SECUNDÁRIO (CONTEÚDO)
+========================= */
+.container-secundario {
+    background-color: var(--fundo-base);
+    border-radius: 12px;
+    padding: 20px;
+    height: 100%; /* OCUPA TODO O CONTAINER PRIMÁRIO */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* SEM SCROLL */
+    box-sizing: border-box;
+}
+
+.container-secundario > * {
+    max-width: 100%;
+}
+
+/* =========================
+   LOGO
+========================= */
+.menu-logo {
+   
+    margin-bottom: 50px;
+    text-align: center;
+}
+
+.menu-logo img {
+    width: 75px;
+    border: 3px solid white;
+    border-radius: 25%; /* Para logo circular */
+    /* ou border-radius: 12px; para cantos arredondados */
+    margin-left: 7px;
+
+}
+
+/* =========================
+   LINKS MENU
+========================= */
+.menu a {
+    padding: 18px 8px;
+    color: #ecf0f1;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    transition: background 0.3s;
+}
+
+
+/* =========================
+   ÍCONES
+========================= */
+.menu a i {
+    font-size: 20px;
+    transition: transform 0.25s ease;
+}
+
+.menu a:hover i {
+    transform: scale(1.15);
+}
+
+.menu-text {
+    margin-top: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+
+
+
+/* =========================
+    SEÇÃO DO USUÁRIO NO MENU
+========================= */
+
+/* A seção do usuário também precisa de contexto */
+.menu-user-section {
+    margin-top: auto;
+    padding: 16px 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+    
+    /* Garante que tooltips saiam do contexto do menu */
+    z-index: 1001;
+}
+
+
+.user-dropdown-trigger {
+    display: flex;
+    flex-direction: column;      /* muda para coluna → ícone em cima */
+    align-items: center;
+    padding: 10px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    gap: 8px;                    /* espaço entre ícone e nome */
+}
+
+.user-dropdown-trigger:hover {
+    background: rgba(255,255,255,0.08);
+    max-width: 100%;
+    transform: scale(1.15);
+    transition: transform 0.25s ease;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.user-avatar {
+    font-size: 1.5rem;           /* ícone maior para ficar bem visível */
+    color: #ffffff;                 /* ou a cor que preferir do tema */
+    line-height: 1;
+}
+
+.user-avatar i {
+    opacity: 0.95;
+}
+
+.user-details {
+    margin-top: 4px;
+}
+
+.user-name {
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;            /* evita overflow no menu estreito */
+}
+
+.user-role {                     /* removi por enquanto, já que não tem cargo */
+    display: none;
+}
+
+/* O resto permanece igual */
+.chevron {
+    font-size: 0.rem;
+    color: #aaa;
+    transition: transform 0.2s;
+    margin-top: 4px;
+}
+
+.user-dropdown-trigger.active .chevron {
+    transform: rotate(180deg);
+}
+
+.user-dropdown-menu {
+    display: none;
+    position: absolute;
+    bottom: 100%;              /* 👈 abre acima */
+    left: 0;
+    width: 100%;
+    margin-bottom: 8px;
+
+    background: #2a2a2a;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 1000;
+}
+
+
+.user-dropdown-menu.show {
+    display: block;
+}
+.user-dropdown-menu.active {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+    background: rgba(255,255,255,0.1);
+    max-width: 100%;
+}
+
+.dropdown-item.logout {
+    color: #ffffff;
+}
+
+.dropdown-item.logout:hover {
+    background: rgba(255, 2, 2, 0.329);
+    border-radius: 6px;
+}
+
+.dropdown-item.config {
+    color: #ffffff;
+}
+
+.dropdown-item.config:hover {
+    background: rgba(2, 255, 57, 0.329);
+    border-radius: 6px;
+}
+.user-details {
+    position: relative;
+}
+
+/* Tooltip - versão melhorada */
+.user-fullname-tooltip {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-5px);
+
+    background: #ffffff;
+    color: #1f2937;
+
+    padding: 8px 12px;
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: all 0.25s ease;
+    z-index: 9999;
+    
+    /* Garante que o tooltip crie um novo contexto de empilhamento */
+    isolation: isolate;
+}
+
+/* seta do tooltip */
+.user-fullname-tooltip::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent #ffffff transparent transparent;
+    
+    /* Garante que a seta também fique acima */
+    z-index: 10001;
+}
+
+/* hover na área inteira do usuário - com z-index máximo */
+.menu-user-section:hover .user-fullname-tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+    z-index: 10000 !important; /* Força z-index extremamente alto */
+}
+
+
+/* Garantia máxima para tooltips do menu lateral */
+.menu *[class*="tooltip"],
+.menu .user-fullname-tooltip,
+.menu-user-section .user-fullname-tooltip {
+    z-index: 2147483647 !important; /* Máximo valor possível de z-index */
+    position: absolute !important;
+}
+
+/* Quando o tooltip estiver visível no hover */
+.menu-user-section:hover .user-fullname-tooltip {
+    z-index: 2147483647 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+}
+
+/* Garantir que o menu de paginação não interfira */
+.pagination-fixed {
+    z-index: 1000 !important; /* Fixo em 1000, bem abaixo do tooltip */
+}
+
+/* Sobrescrever qualquer z-index do menu de paginação quando o tooltip estiver ativo */
+body:has(.menu-user-section:hover) .pagination-fixed {
+    z-index: 999 !important;
+}
+
+
+ /* ===== CRONÔMETRO DE SESSÃO ===== */
+.session-timer-section {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 10px 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border-left: 3px solid #ffc107;
+}
+
+.session-timer-section .timer-icon {
+    margin-right: 12px;
+    font-size: 1.2rem;
+    color: #ffc107;
+}
+
+.session-timer-section .timer-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.session-timer-section .timer-label {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.session-timer-section .timer-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+    font-family: monospace;
+    letter-spacing: 1px;
+}
+
+/* Cores diferentes para cada tipo de usuário */
+.menu[data-user-type="ADMIN"] .session-timer-section {
+    border-left-color: #dc3545;
+}
+
+.menu[data-user-type="ADMIN"] .session-timer-section .timer-icon {
+    color: #dc3545;
+}
+
+.menu[data-user-type="GERENTE"] .session-timer-section {
+    border-left-color: #ffc107;
+}
+
+.menu[data-user-type="GERENTE"] .session-timer-section .timer-icon {
+    color: #ffc107;
+}
+
+.menu[data-user-type="NAO_CADASTRADO"] .session-timer-section {
+    border-left-color: #28a745;
+}
+
+.menu[data-user-type="NAO_CADASTRADO"] .session-timer-section .timer-icon {
+    color: #28a745;
+}
+
+/* Quando estiver expirando (menos de 1 minuto) */
+.session-timer-section.warning {
+    background: rgba(255, 193, 7, 0.2);
+    border-left-color: #ffc107;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.session-timer-section.danger {
+    background: rgba(220, 53, 69, 0.2);
+    border-left-color: #dc3545;
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}

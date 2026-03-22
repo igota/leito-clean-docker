@@ -1,0 +1,673 @@
+/* ======== TÍTULO ======== */
+h2 {
+    text-align: center;
+    font-size: 24px; /* Reduzido de 28px */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #013757;
+    margin: 0 0 15px 0; /* Reduzido de 20px */
+    flex-shrink: 0;
+}
+
+/* ======== CONTAINER PRINCIPAL ======== */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    padding: 0 15px; /* Adicionado padding lateral */
+    margin: 0;
+}
+
+/* ======== CONTAINER DA TABELA (COM SCROLL) ======== */
+.tabela-container {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: auto;
+    min-height: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    border: 1px solid #ddd;
+    scroll-padding-bottom: 20px;
+    margin-bottom: 5px; /* Reduzido */
+}
+
+/* ======== STATUS ======== */
+.status-ativo {
+    background-color: #198754;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px; /* Aumentado um pouco */
+    font-weight: 600;
+    font-size: 12px; /* Reduzido */
+    display: inline-block;
+    line-height: 1.4;
+}
+
+.status-inativo {
+    background-color: #c22d2d;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+    line-height: 1.4;
+}
+
+/* ======== CARD DE FILTRO COMPACTADO ======== */
+.card {
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* Sombra mais suave */
+    border-radius: 10px; /* Reduzido */
+    flex-shrink: 0;
+    margin-bottom: 15px; /* Reduzido de 20px */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+}
+
+.seletores {
+    padding: 1rem 1.25rem; /* Reduzido padding vertical */
+}
+
+.seletores .form-label {
+    margin-bottom: 0.2rem;
+    font-size: 1rem;
+}
+
+.seletores .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background-color: #fff;
+    
+}
+
+.seletores .form-control{
+    font-size: 0.9rem;
+
+}
+
+
+
+/* ======== BOTÕES COMPACTADOS ======== */
+.botoes {
+    max-width: 600px;
+    display: flex;
+    justify-content: center;
+    gap: 8px; /* Reduzido de 10px */
+    margin: 10px auto 0 auto; /* Reduzido de 20px */
+}
+
+.btn {
+    border-radius: 6px; /* Reduzido de 8px */
+    transition: all 0.2s ease;
+    padding: 0.4rem 0.75rem; /* Reduzido padding */
+    font-size: 0.9rem; /* Reduzido */
+}
+
+.btn i {
+    font-size: 1rem; /* Reduzido tamanho do ícone */
+}
+
+.btn:hover {
+    transform: scale(1.02); /* Reduzido efeito */
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+
+.modal-footer .btn-primary:hover {
+    background-color: #012a44;
+    transform: scale(1.02);
+}
+
+.modal-header .btn-close {
+    background-color: transparent;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    color: white;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
+
+/* ======== MODAIS ======== */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background-color: #2c3e50;
+    color: #fff;
+    border-bottom: none;
+}
+
+.modal-title {
+    font-weight: 500;
+}
+
+.modal-footer {
+    border-top: none;
+}
+
+/* ======== TABELA COM TEXTO MENOR ======== */
+.table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    background: #fff;
+    text-align: center;
+    font-size: 0.9rem; /* Reduzido tamanho da fonte */
+}
+
+/* ======== CABEÇALHO FIXO DA TABELA ======== */
+.table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #013757 !important;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.8rem; /* Reduzido de 0.85rem */
+    letter-spacing: 0.02em; /* Reduzido */
+    z-index: 20;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    border: 1px solid #ddd;
+    text-align: center;
+    padding: 10px 6px; /* Reduzido padding */
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.table thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.table thead th:hover {
+    background-color: #0056b3 !important;
+}
+
+.table thead th.asc::after {
+    content: ' ▲';
+    font-size: 10px; /* Reduzido */
+    margin-left: 3px; /* Reduzido */
+}
+
+.table thead th.desc::after {
+    content: ' ▼';
+    font-size: 10px; /* Reduzido */
+    margin-left: 3px; /* Reduzido */
+}
+
+/* ======== CORPO DA TABELA ======== */
+.table tbody {
+    background-color: #fff;
+}
+
+.table tbody tr:hover {
+    background-color: #f1f3f5;
+    transition: background 0.2s;
+}
+
+.table tbody td {
+    padding: 8px 6px; /* Reduzido padding */
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    background-color: #fff;
+    font-size: 0.9rem; /* Fonte um pouco menor */
+}
+
+/* ======== BOTÕES DE AÇÃO NA TABELA ======== */
+.table tbody td .btn-sm {
+    padding: 0.2rem 0.4rem; /* Reduzido */
+    font-size: 0.75rem; /* Reduzido */
+    margin: 0 1px; /* Reduzido */
+}
+
+/* ======== ÍCONES ======== */
+.table i {
+    font-size: 1rem; /* Reduzido de 1.1rem */
+}
+
+/* ======== FORMULÁRIOS (já está bom) ======== */
+.form-label {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.form-control,
+.form-select {
+    border-radius: 6px;
+}
+
+.form-select {
+    cursor: pointer;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+input:focus,
+select:focus {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.25);
+}
+
+.form-check-label {
+    color: #495057;
+}
+
+/* ======== PAGINAÇÃO NORMAL ======== */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    color: #013757;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-pagination {
+    background-color: #fff;
+    border: 1px solid #013757;
+    color: #013757;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 40px;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background-color: #013757;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.btn-pagination:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-pagination.active {
+    background-color: #013757;
+    color: #fff;
+    border-color: #013757;
+}
+
+.pagination-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-size-selector select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.4rem 0.9rem;
+    color: #013757;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.pagination-size-selector select:focus {
+    border-color: #013757;
+    box-shadow: 0 0 0 0.15rem rgba(1, 55, 87, 0.25);
+    outline: none;
+}
+
+/* ======== MENU DE NAVEGAÇÃO FIXO ======== */
+.pagination-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    display: none;
+    padding: 4px 0;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 2px solid #013757;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.pagination-fixed.visible {
+    display: block;
+}
+
+.pagination-fixed .pagination-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.pagination-fixed .pagination-info {
+    color: #013757;
+    font-weight: 600;
+    font-size: 0.95rem;
+    background: rgba(1, 55, 87, 0.1);
+    padding: 5px 15px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.pagination-fixed .pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-fixed .btn-pagination {
+    background-color: #fff;
+    border: 1px solid #013757;
+    color: #013757;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 45px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-fixed .btn-pagination:hover:not(:disabled) {
+    background-color: #013757;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(1, 55, 87, 0.3);
+}
+
+.pagination-fixed .btn-pagination:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #6c757d;
+    color: #6c757d;
+    transform: none;
+    box-shadow: none;
+}
+
+.pagination-fixed .btn-pagination.active {
+    background-color: #013757;
+    color: #fff;
+    border-color: #013757;
+    box-shadow: 0 2px 4px rgba(1, 55, 87, 0.3);
+}
+
+.pagination-fixed .pagination-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(1, 55, 87, 0.1);
+    padding: 5px 15px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.pagination-fixed .pagination-size-selector label {
+    color: #013757;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-right: 5px;
+}
+
+.pagination-fixed .pagination-size-selector select {
+    border: 1px solid #013757;
+    border-radius: 8px;
+    padding: 0.5rem 2.5rem 0.5rem 1rem;
+    color: #013757;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23013757' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 14px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-width: 80px;
+    transition: all 0.2s ease;
+}
+
+/* ======== AJUSTE PARA MENU LATERAL ======== */
+body:has(.sidebar) .pagination-fixed,
+body:has(.menu) .pagination-fixed {
+    left: 120px;
+    width: calc(100% - 120px);
+}
+
+/* ======== AJUSTE DE ESPAÇAMENTO COM MENU FIXO ======== */
+body:has(.pagination-fixed.visible) .container {
+    padding-bottom: 70px;
+}
+
+body:has(.pagination-fixed.visible) .tabela-container {
+    height: calc(100% - 70px);
+    margin-bottom: 10px;
+}
+
+/* ======== ANIMAÇÃO ======== */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.pagination-fixed.visible {
+    animation: slideUp 0.3s ease forwards;
+}
+
+/* ======== SCROLLBAR PERSONALIZADA ======== */
+.tabela-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.tabela-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb {
+    background: #013757;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+/* ======== CORREÇÃO DO MENU DE PAGINAÇÃO ======== */
+
+/* Garantir que o menu de paginação respeite o menu lateral */
+body.has-sidebar .pagination-fixed,
+body:has(.menu) .pagination-fixed {
+    left: 120px !important;
+    width: calc(100% - 120px) !important;
+    right: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Garantir que o conteúdo interno não ultrapasse */
+.pagination-fixed .pagination-container {
+    max-width: 100%;
+    padding: 0 20px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+}
+
+/* Ajuste para os elementos internos não quebrarem */
+.pagination-fixed .pagination-info,
+.pagination-fixed .pagination-controls,
+.pagination-fixed .pagination-size-selector {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* Garantir que os botões não ultrapassem */
+.pagination-fixed .btn-pagination {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Reset para mobile */
+@media (max-width: 768px) {
+    body.has-sidebar .pagination-fixed,
+    body:has(.menu) .pagination-fixed {
+        left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* ======== RESPONSIVIDADE ======== */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+
+    .botoes {
+        flex-direction: column;
+        max-width: 100%;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table thead th {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+
+    .table tbody td {
+        padding: 6px 4px;
+    }
+
+    .pagination-fixed {
+        padding: 8px 0;
+    }
+
+    body:has(.menu) .pagination-fixed,
+    body:has(.sidebar) .pagination-fixed {
+        left: 0;
+        width: 100%;
+    }
+
+    .pagination-fixed .pagination-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pagination-fixed .pagination-info,
+    .pagination-fixed .pagination-size-selector {
+        white-space: normal;
+        width: 90%;
+        justify-content: center;
+    }
+
+    body:has(.pagination-fixed.visible) {
+        padding-bottom: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination-fixed .pagination-container {
+        gap: 5px;
+    }
+
+    .pagination-fixed .pagination-size-selector {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    body:has(.pagination-fixed.visible) {
+        padding-bottom: 150px;
+    }
+}

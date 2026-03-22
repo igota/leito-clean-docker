@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <title>Leito Clean - Limpezas</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/paginaCadastroLimpeza.css') }}">
+
+<div class="container">
+    <h2 class="titulo-pagina">Limpezas</h2>
+
+    <!-- 🔍 Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="formBusca" class="row g-3" onsubmit="pesquisar(event)">
+
+                <div class="seletores">
+                    <div class="col-md-3">
+                        <label class="form-label">Setor</label>
+                        <select id="selectSetor" class="form-select"></select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Leito</label>
+                        <select id="selectLeito" class="form-select"></select>
+                    </div>
+
+                    <!-- 🔥 NOVO: Filtro de Modo de Registro -->
+                    <div class="col-md-2">
+                        <label class="form-label">Modo de Cadastro</label>
+                        <select id="selectModo" class="form-select">
+                            <option value="TODOS">Todos</option>
+                            <option value="MANUAL">Manual</option>
+                            <option value="AUTOMATICO">Automático</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="botoes">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+
+                    <button type="button" class="btn btn-outline-danger w-100" onclick="limparPesquisa()">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCadastro">
+                        <i class="bi bi-plus-circle"></i>  Nova Limpeza
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- 📋 Tabela -->
+    <div class="tabela-container">
+        <table class="table table-striped table-bordered" id="tabelaLimpezas">
+            <thead class="table-dark">
+                <tr>
+                    <th>DATA INÍCIO</th>
+                    <th>DATA FIM</th>
+                    <th>VALIDAÇÃO</th>
+                    <th>VENCIMENTO</th>
+                    <th>SETOR</th>
+                    <th>LEITO</th>
+                    <th>PACIENTE</th>
+                    <th>ASG</th>
+                    <th>ENFERMEIRO(A)</th>
+                    <th>TIPO</th>
+                    <th>TEMPO</th>
+                    <th>MODO</th>
+                    <th>STATUS</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Menu de Navegação Fixo (inicialmente escondido) -->
+<div class="pagination-fixed" id="paginationFixed">
+  <div class="pagination-container">
+      <div class="pagination-info" id="paginationInfo"></div>
+      <div class="pagination-controls" id="paginationControls"></div>
+
+      <div class="pagination-size-selector">
+          <label for="itemsPerPageFixed">Itens/página:</label>
+          <select id="itemsPerPageFixed" class="form-select form-select-sm">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+          </select>
+      </div>
+  </div>
+</div>
+
+
+<!-- 🪟 Modal de Cadastro -->
+<div class="modal fade" id="modalCadastro" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Cadastrar Nova Limpeza</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formCadastroLimpeza" onsubmit="salvarNovaLimpeza(event)">
+          
+          <div id="alertCadastroLimpeza" style="display:none;" class="alert alert-danger py-2"></div>
+
+          <!-- Linha 1: Setor e Leito -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Setor <span class="text-danger">*</span></label>
+              <select id="modalSetor" class="form-select" required>
+                <option value="">Selecione um setor</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="modalLeito" class="form-label">Leito <span class="text-danger">*</span></label>
+              <select class="form-select" id="modalLeito" required disabled>
+                <option value="">Primeiro selecione um setor</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Linha 2: Tipo Limpeza e Paciente -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Limpeza <span class="text-danger">*</span></label>
+              <select id="tipoLimpeza" class="form-select" required>
+                <option value="">Selecione...</option>
+                <option value="Concorrente">Concorrente</option>
+                <option value="Alta / Óbito / Transferência">Alta / Óbito / Transferência</option>
+                <option value="Longa Permanência">Longa Permanência</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Paciente <span class="text-danger">*</span></label>
+              <div class="d-flex align-items-center">
+                <input type="text" id="paciente" class="form-control me-2" placeholder="Nome do paciente" required>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="semPaciente" onchange="toggleSemPaciente()">
+                  <label class="form-check-label">Sem Paciente</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 3: ASG -->
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label">ASG <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" id="nomeAsg" class="form-control" placeholder="Clique na lupa para buscar" 
+                      readonly required style="background-color: #f8f9fa; cursor: pointer;" 
+                      onclick="buscarFuncionario('asg')">
+                <button class="btn btn-outline-secondary" type="button" onclick="buscarFuncionario('asg')">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <input type="hidden" id="idCartaoAsg" required>
+              <small class="text-muted">Clique no campo ou na lupa para buscar</small>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="asgPadrao" onchange="toggleFuncionarioPadrao('asg')">
+                <label class="form-check-label">ASG Padrão</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 4: Enfermeiro -->
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label">Enfermeiro(a) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" id="nomeEnf" class="form-control" placeholder="Clique na lupa para buscar" 
+                      readonly required style="background-color: #f8f9fa; cursor: pointer;"
+                      onclick="buscarFuncionario('enf')">
+                <button class="btn btn-outline-secondary" type="button" onclick="buscarFuncionario('enf')">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <input type="hidden" id="idCartaoEnf" required>
+              <small class="text-muted">Clique no campo ou na lupa para buscar</small>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="enfPadrao" onchange="toggleFuncionarioPadrao('enf')">
+                <label class="form-check-label">Enfermeiro Padrão</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINHA 5: Data Início e Data Fim -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Data Início <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="datetime-local" id="dataInicio" class="form-control" required>
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="dataInicioNow" onchange="setDataHoraAtual('inicio')">
+                  <label class="form-check-label ms-1">Agora</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Data Fim <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="datetime-local" id="dataFim" class="form-control" required>
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="dataFimNow" onchange="setDataHoraAtual('fim')">
+                  <label class="form-check-label ms-1">Agora</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINHA 6: Data Validação e Data Vencimento -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Data Validação <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="datetime-local" id="dataValidacao" class="form-control" required>
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="validacaoIgualFim" onchange="validacaoIgualDataFim()">
+                  <label class="form-check-label ms-1">= Fim</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="dataVencimento" class="form-label">Data Vencimento <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="datetime-local" class="form-control" id="dataVencimento" style="background-color: #e9ecef;" disabled required>
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="calcular8dias">
+                  <label class="form-check-label ms-1">+8 dias</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 7: Status e Tempo -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select id="status" class="form-select" required>
+                <option value="">Selecione...</option>
+                <option value="CONCLUIDA">Concluída</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_ANDAMENTO">Em Andamento</option>
+                <option value="AGUARDANDO_VALIDACAO">Aguardando Validação</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tempo <span class="text-danger">*</span></label>
+              <div class="d-flex align-items-center">
+                <input type="text" id="tempoTotalText" class="form-control me-2" placeholder="00:00" value="50:00" required>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="tempo50min" checked onchange="toggleTempo50min()">
+                  <label class="form-check-label">50 min</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- IP do dispositivo (hidden) -->
+          <input type="hidden" id="ipDispositivo">
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<!-- 🪟 Modal de Edição -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Limpeza</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formEditarLimpeza" onsubmit="salvarEdicaoLimpeza(event)">
+          
+          <div id="alertEdicaoLimpeza" style="display:none;" class="alert alert-danger py-2"></div>
+
+          <input type="hidden" id="editIdLimpeza">
+
+          <!-- Linha 1: Setor e Leito -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Setor <span class="text-danger">*</span></label>
+              <select id="editSetor" class="form-select" required onchange="atualizarLeitosModalEdicao()">
+                <option value="">Selecione um setor</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="editLeito" class="form-label">Leito *</label>
+              <select class="form-select" id="editLeito" required>
+                <option value="">Selecione um leito</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Linha 2: Tipo Limpeza e Paciente -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Limpeza <span class="text-danger">*</span></label>
+              <select id="editTipoLimpeza" class="form-select" required>
+                <option value="">Selecione...</option>
+                <option value="Concorrente">Concorrente</option>
+                <option value="Alta / Óbito / Transferência">Alta / Óbito / Transferência</option>
+                <option value="Longa Permanência">Longa Permanência</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Paciente</label>
+              <div class="d-flex align-items-center">
+                <input type="text" id="editPaciente" class="form-control me-2" placeholder="Nome do paciente">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="editSemPaciente" onchange="toggleEditSemPaciente()">
+                  <label class="form-check-label">Sem Paciente</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 3: ASG -->
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label">ASG <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" id="editNomeAsg" class="form-control" placeholder="Clique na lupa para buscar" 
+                      readonly required style="background-color: #f8f9fa; cursor: pointer;" 
+                      onclick="buscarFuncionarioEdicao('asg')">
+                <button class="btn btn-outline-secondary" type="button" onclick="buscarFuncionarioEdicao('asg')">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <input type="hidden" id="editIdCartaoAsg">
+              <small class="text-muted">Clique no campo ou na lupa para buscar</small>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="editAsgPadrao" onchange="toggleFuncionarioPadraoEdicao('asg')">
+                <label class="form-check-label">ASG Padrão</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 4: Enfermeiro -->
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label">Enfermeiro(a) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" id="editNomeEnf" class="form-control" placeholder="Clique na lupa para buscar" 
+                      readonly required style="background-color: #f8f9fa; cursor: pointer;"
+                      onclick="buscarFuncionarioEdicao('enf')">
+                <button class="btn btn-outline-secondary" type="button" onclick="buscarFuncionarioEdicao('enf')">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
+              <input type="hidden" id="editIdCartaoEnf">
+              <small class="text-muted">Clique no campo ou na lupa para buscar</small>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="editEnfPadrao" onchange="toggleFuncionarioPadraoEdicao('enf')">
+                <label class="form-check-label">Enfermeiro Padrão</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINHA 5: Data Início e Data Fim (lado a lado) -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Data Início</label>
+              <div class="input-group">
+                <input type="datetime-local" id="editDataInicio" class="form-control">
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="editDataInicioNow" onchange="setDataHoraAtualEdicao('inicio')">
+                  <label class="form-check-label ms-1">Agora</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Data Fim</label>
+              <div class="input-group">
+                <input type="datetime-local" id="editDataFim" class="form-control">
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="editDataFimNow" onchange="setDataHoraAtualEdicao('fim')">
+                  <label class="form-check-label ms-1">Agora</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINHA 6: Data Validação e Data Vencimento (lado a lado) -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Data Validação</label>
+              <div class="input-group">
+                <input type="datetime-local" id="editDataValidacao" class="form-control">
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="editValidacaoIgualFim" onchange="validacaoIgualDataFimEdicao()">
+                  <label class="form-check-label ms-1">= Fim</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="editDataVencimento" class="form-label">Data Vencimento</label>
+              <div class="input-group">
+                <input type="datetime-local" class="form-control" id="editDataVencimento" style="background-color: #e9ecef;">
+                <div class="input-group-text">
+                  <input class="form-check-input mt-0" type="checkbox" id="editCalcular8dias">
+                  <label class="form-check-label ms-1">+8 dias</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 7: Status e Tempo -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Status</label>
+              <select id="editStatus" class="form-select">
+                <option value="CONCLUIDA" selected>Concluída</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_ANDAMENTO">Em Andamento</option>
+                <option value="AGUARDANDO_VALIDACAO">Aguardando Validação</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tempo</label>
+              <div class="d-flex align-items-center">
+                <input type="text" id="editTempoTotal" class="form-control me-2" placeholder="00:00:00" value="00:50:00">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="editTempo50min" checked onchange="toggleTempo50minEdicao()">
+                  <label class="form-check-label">50 min</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 🪟 Modal de Busca de Funcionários -->
+<div class="modal fade" id="modalBuscaFuncionario" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalBuscaTitulo">Buscar Funcionário</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Campo de busca -->
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="buscaFuncionarioInput" class="form-control" placeholder="Digite nome ou ID do cartão...">
+                </div>
+                
+                <!-- Tabela de resultados -->
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark" style="position: sticky; top: 0;">
+                            <tr>
+                                <th>ID Cartão</th>
+                                <th>Nome</th>
+                                <th>Tipo</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaFuncionariosBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    Digite para pesquisar...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container - ALTERADO PARA CANTO SUPERIOR DIREITO -->
+<div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 2000;"></div>
+
+<script src="{{ url_for('static', filename='js/paginaCadastroLimpeza.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,310 @@
+/* ===== Página ===== */
+.titulo-pagina {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #013757;
+    position: relative;
+    margin-bottom: 50px;
+    margin-top: 30px;
+}
+
+/* ===== Cards ===== */
+.relatorios-cards {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-bottom: 30px;
+}   
+
+.relatorio-card {
+    background: #013757;
+    border-radius: 14px;
+    padding: 25px;
+    width: 180px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #ffffff;
+    border: none;
+}
+
+.relatorio-card i {
+    font-size: 38px;
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+
+.relatorio-card h3 {
+    margin: 10px 0 5px;
+    font-size: 20px;
+}
+
+.relatorio-card:hover {
+    background: #0056b3;
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* ===== POPUP ESTILIZADO COMO MODAL ===== */
+.popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    backdrop-filter: blur(3px);
+}
+
+.popup.oculto {
+    display: none;
+}
+
+.popup-dialog {
+    width: 500px;
+    max-width: 95%;
+    margin: 1.75rem auto;
+}
+
+.popup-conteudo {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header do popup (igual aos modais) */
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: #013757;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.popup-header h5 {
+    margin: 0;
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.popup-header h5 i {
+    margin-right: 8px;
+}
+
+/* Botão fechar no header */
+.popup-header .fechar-popup {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    line-height: 1;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.popup-header .fechar-popup:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(90deg);
+}
+
+/* Corpo do popup */
+.popup-body {
+    position: relative;
+    flex: 1 1 auto;
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* ===== FORMULÁRIO ===== */
+.form-relatorio {
+    width: 100%;
+}
+
+.form-relatorio label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.form-relatorio select,
+.form-relatorio input {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    background-color: white;
+    cursor: pointer;
+}
+
+.form-relatorio select:focus,
+.form-relatorio input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-relatorio select:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Período em duas colunas */
+.periodo {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.periodo input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Botões de período rápido */
+.periodos-rapidos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.periodo-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    color: #495057;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.periodo-btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.periodo-btn.ativo {
+    background-color: #013757;
+    border-color: #013757;
+    color: white;
+}
+
+/* Footer do popup */
+.popup-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #dee2e6;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    gap: 10px;
+}
+
+/* Botão Gerar Relatório */
+#btnGerarRelatorio {
+    padding: 8px 24px;
+    background: #013757;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#btnGerarRelatorio:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#btnGerarRelatorio i {
+    font-size: 1rem;
+}
+
+/* Botão Cancelar (opcional - se quiser adicionar) */
+.btn-cancelar {
+    padding: 8px 24px;
+    background: #6c757d;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-cancelar:hover {
+    background: #5a6268;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 576px) {
+    .popup-footer {
+        flex-direction: column-reverse;
+    }
+    
+    #btnGerarRelatorio,
+    .btn-cancelar {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .periodo {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .periodo input {
+        width: 100%;
+    }
+}

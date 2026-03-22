@@ -1,0 +1,712 @@
+:root {
+    --menu-width: 90px;
+    --cor-primaria: rgb(1, 55, 87);
+    --fundo-base: #181b2b;
+    
+    /* Cores de status */
+    --status-concluida: rgb(28, 185, 14);
+    --status-andamento: #ffa600;
+    --status-pendente: #e74c3c;
+    --status-validacao: #cccccc;
+    
+    /* Cores de badges */
+    --badge-5: #e0d100;
+    --badge-6: #F39C12;
+    --badge-7: #e74c3c;
+}
+
+/* ============================================
+   🎯 LAYOUT PRINCIPAL
+   ============================================ */
+
+.painel-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.painel-header h2 {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+.painel-container {
+    text-align: center;
+}
+
+.grade-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: auto 0;
+}
+
+/* ============================================
+   🎮 CONTROLES
+   ============================================ */
+
+.controls-container {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-direction: column;
+}
+
+.view-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.view-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid #fff;
+    background: #1e1e1e;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-btn.ativo {
+    background: #007bff;
+    border-color: #007bff;
+}
+
+.setor-selector select {
+    padding: 6px 12px;
+    margin-right: 10px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    background-color: #ffffff;
+    color: #333;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+    cursor: pointer;
+}
+
+/* ============================================
+   📊 PAINEL DE STATUS
+   ============================================ */
+
+.painel-status {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.status-box {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    color: #fff;
+    font-weight: bold;
+    transition: transform 0.2s ease;
+}
+
+.status-box span {
+    font-size: 30px;
+    display: block;
+}
+
+.status-box small {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.status-box.concluida { background: var(--status-concluida); }
+.status-box.andamento { background: var(--status-andamento); color: #000; }
+.status-box.pendente { background: var(--status-pendente); }
+.status-box.validacao { background: var(--status-validacao); color: #000; }
+
+.status-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* ============================================
+   📋 MODO TABELA
+   ============================================ */
+
+.tabela-limpezas {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tabela-limpezas th {
+    background-color: var(--cor-primaria);
+    color: #ffffff;
+    padding: 15px 12px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #ddd;
+    font-size: 16px;
+}
+
+.tabela-limpezas td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+    border: 1px solid #ddd;
+    font-size: 18px;
+}
+
+.tabela-limpezas tr:last-child td {
+    border-bottom: none;
+}
+
+.tabela-limpezas tr:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* Status na tabela */
+.status-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Cores das linhas */
+.status-concluida { background-color: rgba(28, 185, 14, 0.1); }
+.status-concluida .status-indicator { background-color: var(--status-concluida); }
+.status-concluida:hover { background-color: rgba(28, 185, 14, 0.2); }
+
+.status-andamento { background-color: rgba(255, 166, 0, 0.1); }
+.status-andamento .status-indicator { background-color: var(--status-andamento); }
+.status-andamento:hover { background-color: rgba(255, 166, 0, 0.2); }
+
+.status-pendente { background-color: rgba(231, 76, 60, 0.1); }
+.status-pendente .status-indicator { background-color: var(--status-pendente); }
+.status-pendente:hover { background-color: rgba(231, 76, 60, 0.2); }
+
+.status-validacao { background-color: rgba(204, 204, 204, 0.1); }
+.status-validacao .status-indicator { background-color: #757070; }
+.status-validacao:hover { background-color: rgba(70, 67, 67, 0.39); }
+
+/* ============================================
+   📊 STATUS PROGRESS - BARRINHAS
+   ============================================ */
+
+.status-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.progress-bars {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.progress-bar {
+    width: 12px;
+    height: 20px;
+    border-radius: 4px;
+    background-color: #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.progress-bar-5.active {
+    background: linear-gradient(145deg, #ffd700, #e6c300);
+    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.4);
+}
+
+.progress-bar-6.active {
+    background: linear-gradient(145deg, #ff9800, #f57c00);
+    box-shadow: 0 2px 6px rgba(255, 152, 0, 0.5);
+}
+
+.progress-bar-7.active {
+    background: linear-gradient(145deg, #e74c3c, #c0392b);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.6);
+}
+
+.status-ampulheta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 16px;
+    background-color: rgba(0, 0, 0, 0.05);
+    font-size: 20px;
+}
+
+.status-ampulheta i {
+    font-size: 20px;
+}
+
+/* ============================================
+   🃏 MODO GRADE - CARDS
+   ============================================ */
+
+.grid-setores {
+    display: flex;
+    width: 100%;
+    gap: 20px;
+}
+
+.setor-card {
+    position: relative;
+    background: linear-gradient(180deg, #132b46 0%, #13365a 45%, #1a3655 100%);
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14),
+                0 18px 36px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    font-size: 1.25rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.setor-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25),
+                0 20px 40px rgba(0, 0, 0, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.setor-card h3 {
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+
+.grid-leitos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* Cards de leito - Versão otimizada */
+.leito-card {
+    position: relative;
+    width: 95px;
+    height: 75px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    z-index: 1;
+    
+    /* Otimizações de performance */
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Cores dos cards */
+.status-concluida-grid { background-color: var(--status-concluida); }
+.status-andamento-grid { background-color: var(--status-andamento); color: #000; }
+.status-validacao-grid { background-color: var(--status-validacao); color: #000; }
+
+/* Card pendente - com animação otimizada */
+.status-pendente-grid {
+    background-color: var(--status-pendente);
+    animation: cardPulse 2s infinite ease-in-out;
+}
+
+@keyframes cardPulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    50% { 
+        transform: scale(1.02);
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+    }
+}
+
+.status-pendente-grid:hover {
+    animation: cardPulseHover 1s infinite;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+}
+
+@keyframes cardPulseHover {
+    0%, 100% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+    }
+    50% { 
+        transform: scale(1.08);
+        box-shadow: 0 0 30px rgba(231, 76, 60, 1);
+    }
+}
+
+/* ============================================
+   📍 BADGES - VERSÃO OTIMIZADA
+   ============================================ */
+
+.leito-badge {
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 20;
+    border: 2px solid rgba(255,255,255,0.3);
+    
+    /* Otimizações */
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.badge-5dias {
+    background-color: var(--badge-5);
+    color: black;
+    animation: badgePulse 1.5s infinite ease-in-out;
+}
+
+.badge-6dias {
+    background-color: var(--badge-6);
+    color: black;
+    animation: badgePulse 1.5s infinite ease-in-out;
+}
+
+.badge-7dias {
+    background-color: var(--badge-7);
+    animation: badgePulse 1.5s infinite ease-in-out;
+}
+
+@keyframes badgePulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(230, 126, 34, 0.6);
+    }
+    50% { 
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(230, 126, 34, 0.9);
+    }
+}
+
+@keyframes badgeAppear {
+    0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+    }
+    80% {
+        transform: scale(1.1) rotate(0deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   📝 ÍCONE DE JUSTIFICATIVA
+   ============================================ */
+
+.justificativa-icon {
+    position: absolute;
+    bottom: -9px;
+    left: -5px;
+    width: 34px;
+    height: 34px;
+    background-color: #ffc107;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 25;
+    border: 2px solid white;
+    animation: iconAppear 0.3s ease;
+}
+
+.justificativa-icon i {
+    font-size: 16px;
+}
+
+@keyframes iconAppear {
+    0% {
+        transform: scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+    80% {
+        transform: scale(1.1) rotate(10deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.justificativa-icon:hover {
+    transform: scale(1.1);
+    background-color: #ffca2c;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Ícone na tabela */
+.justificativa-icon-tabela {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: #ffc107;
+    border-radius: 50%;
+    color: #000;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border: 2px solid white;
+}
+
+.justificativa-icon-tabela:hover {
+    transform: scale(1.15);
+    background-color: #ffca2c;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Tooltip */
+.justificativa-icon-tabela {
+    position: relative;
+}
+
+.justificativa-icon-tabela:hover::after {
+    content: "Ver justificativa";
+    position: absolute;
+    top: -35px;
+    right: 30%;
+    transform: translateX(-50%);
+    background-color: rgba(0,0,0,0.9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    border: 1px solid #ffc107;
+    pointer-events: none;
+}
+
+/* ============================================
+   📜 TIMELINE DE VERSÕES
+   ============================================ */
+
+.timeline-versions {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 10px;
+    position: relative;
+}
+
+.timeline-versions::before {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+    z-index: 0;
+}
+
+.version-card {
+    position: relative;
+    margin-left: 60px;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+    z-index: 1;
+}
+
+.version-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.version-card::before {
+    content: '';
+    position: absolute;
+    left: -45px;
+    top: 20px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid white;
+    z-index: 2;
+}
+
+.version-card.criacao {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left: 5px solid #28a745;
+}
+.version-card.criacao::before { background: #28a745; }
+
+.version-card.edicao:nth-child(odd) {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+    border-left: 5px solid #ffc107;
+}
+.version-card.edicao:nth-child(odd)::before { background: #ffc107; }
+
+.version-card.edicao:nth-child(even) {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left: 5px solid #17a2b8;
+}
+.version-card.edicao:nth-child(even)::before { background: #17a2b8; }
+
+.version-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.version-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    background: rgba(255,255,255,0.5);
+}
+
+.version-date {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.version-user {
+    font-weight: bold;
+    color: #495057;
+}
+
+.version-body {
+    padding: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.version-content {
+    background: rgba(255,255,255,0.7);
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* ============================================
+   🚀 FULLSCREEN
+   ============================================ */
+
+body.fullscreen-mode header,
+body.fullscreen-mode nav {
+    display: none !important;
+}
+
+body.fullscreen-mode {
+    overflow: hidden;
+}
+
+body.fullscreen-mode .painel-container {
+    height: calc(100vh - 140px);
+}
+
+/* ============================================
+   📱 RESPONSIVIDADE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .progress-bars { gap: 3px; }
+    .progress-bar { width: 10px; height: 16px; }
+    .status-ampulheta { font-size: 12px; padding: 2px 6px; }
+    
+    .tabela-container { max-width: 100%; margin: 10px auto; }
+    .tabela-limpezas { font-size: 14px; }
+    .tabela-limpezas th,
+    .tabela-limpezas td { padding: 8px 6px; }
+    
+    .painel-header {
+        padding: 10px 20px;
+        padding-inline-start: 20px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    /* Animações mais suaves em dispositivos móveis */
+    .status-pendente-grid {
+        animation-duration: 3s;
+    }
+    
+    .badge-5dias,
+    .badge-6dias,
+    .badge-7dias {
+        animation-duration: 2.5s;
+    }
+}
+
+/* Dispositivos muito lentos - desliga animações */
+@media (max-width: 480px) {
+    .status-pendente-grid,
+    .badge-5dias,
+    .badge-6dias,
+    .badge-7dias {
+        animation: none !important;
+    }
+}
+
+/* Respeita preferência do usuário por redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+    .status-pendente-grid,
+    .badge-5dias,
+    .badge-6dias,
+    .badge-7dias,
+    .justificativa-icon,
+    .setor-card,
+    .view-btn,
+    .status-box {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
+}

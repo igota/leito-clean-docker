@@ -1,0 +1,600 @@
+{% extends "base.html" %}
+
+{% block content %}
+<title>Configuração do Sistema</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/paginaConfig.css') }}">
+
+<div class="container">
+    <h2 class="titulo-pagina mb-4">Configuração do Sistema</h2>
+    
+    <!-- Navegação por abas -->
+    <ul class="nav nav-tabs" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="dispositivos-tab" data-bs-toggle="tab" 
+                    data-bs-target="#dispositivos" type="button" role="tab" 
+                    aria-controls="dispositivos" aria-selected="true">
+                <i class="bi bi-hdd-stack"></i> Dispositivos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="setores-tab" data-bs-toggle="tab" 
+                    data-bs-target="#setores" type="button" role="tab" 
+                    aria-controls="setores" aria-selected="false">
+                <i class="bi bi-building"></i> Setores
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="usuarios-tab" data-bs-toggle="tab" 
+                    data-bs-target="#usuarios" type="button" role="tab" 
+                    aria-controls="usuarios" aria-selected="false">
+                <i class="bi bi-people"></i> Usuários
+            </button>
+        </li>
+    </ul>
+
+    <!-- Conteúdo das abas -->
+    <div class="tab-content p-4 border border-top-0 rounded-bottom" id="configTabsContent">
+        
+        <!-- Aba Dispositivos -->
+        <div class="tab-pane fade show active" id="dispositivos" role="tabpanel" aria-labelledby="dispositivos-tab">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Dispositivos</h4>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCadastro">
+                    <i class="bi bi-plus-lg"></i> Novo Dispositivo
+                </button>
+            </div>
+
+            <div class="tabela-container">
+                <table class="table table-striped table-bordered" id="tabelaDispositivos">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>IP</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in dispositivos %}
+                        <tr>
+                            <td>{{ d.nome }}</td>
+                            <td>{{ d.ip }}</td>
+                            <td>
+                                {% if d.status %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary btn-editar"
+                                    data-id="{{ d.id }}"
+                                    data-nome="{{ d.nome }}"
+                                    data-ip="{{ d.ip }}"
+                                    data-status="{{ d.status }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Aba Setores -->
+        <div class="tab-pane fade" id="setores" role="tabpanel" aria-labelledby="setores-tab">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Setores</h4>
+                <div>
+                    <button class="btn btn-outline-secondary me-2" id="btnAtualizarSetores">
+                        <i class="bi bi-arrow-repeat"></i> Atualizar Setores
+                    </button>
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalSetorCadastro">
+                        <i class="bi bi-plus-lg"></i> Novo Setor
+                    </button>
+                </div>
+            </div>
+
+            <div class="tabela-container">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Setor</th>
+                            <th>Quantidade Leitos</th>
+                            <th>Dispositivo</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in setores %}
+                        <tr>
+                            <td>{{ s.nome }}</td>
+                            <td>{{ s.qtd_leitos }}</td>
+                            <td>
+                                {% if s.id_dispositivo and s.dispositivo_ip %}
+                                    {{ s.dispositivo_ip }}
+                                {% elif s.id_dispositivo and not s.dispositivo_ip %}
+                                    <span class="text-warning">Dispositivo sem IP</span>
+                                {% else %}
+                                    <span class="text-muted">Não vinculado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.status %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary btn-editar-setor"
+                                    data-id="{{ s.id }}"
+                                    data-nome="{{ s.nome }}"
+                                    data-leitos="{{ s.qtd_leitos }}"
+                                    data-dispositivo="{{ s.id_dispositivo }}"
+                                    data-dispositivo-ip="{{ s.dispositivo_ip if s.dispositivo_ip else '' }}"
+                                    data-status="{{ s.status }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+<!-- Aba Usuários -->
+<div class="tab-pane fade" id="usuarios" role="tabpanel" aria-labelledby="usuarios-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Usuários</h4>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUsuarioCadastro">
+            <i class="bi bi-plus-lg"></i> Novo Usuário
+        </button>
+    </div>
+
+    <div class="tabela-container">
+        <table class="table table-striped table-bordered" id="tabelaUsuarios">
+            <thead class="table-dark">
+                <tr>
+                    <th>Login</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Tipo</th>
+                    <th>Notificações</th>
+                    <th>Setores</th>
+                    <th>Último Acesso</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td>{{ u.login }}</td>
+                    <td>{{ u.nome }}</td>
+                    <td>{{ u.email or '-' }}</td>
+                    <td>
+                        {% if u.tipo == 'ADMIN' %}
+                            <span class="badge bg-danger">Administrador</span>
+                        {% else %}
+                            <span class="badge bg-primary">Gerente</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if u.notificacoes %}
+                            <span class="badge bg-success">Sim</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Não</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.setores_notificacao %}
+                            {% for setor in u.setores_notificacao %}
+                                <span class="badge bg-primary text-white me-1">{{ setor }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Nenhum</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.ultimo_acesso %}
+                            {{ u.ultimo_acesso|datetimeformat }}
+                        {% else %}
+                            <span class="text-muted">Nunca acessou</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.status %}
+                            <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary btn-editar-usuario"
+                            data-id="{{ u.id }}"
+                            data-login="{{ u.login }}"
+                            data-nome="{{ u.nome }}"
+                            data-email="{{ u.email or '' }}"
+                            data-tipo="{{ u.tipo }}"
+                            data-notificacoes="{% if u.notificacoes %}true{% else %}false{% endif %}"
+                            data-setores="{{ u.setores_ids|join(',') if u.setores_ids else '' }}"
+                            data-status="{{ u.status }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Cadastro Dispositivo -->
+<div class="modal fade" id="modalCadastro" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar Dispositivo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/dispositivos">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">IP</label>
+                        <input name="ip" class="form-control" required>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" checked>
+                        <label class="form-check-label fw-bold">Ativo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Dispositivo -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Dispositivo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/dispositivos">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="editId">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input name="nome" id="editNome" class="form-control" required>
+                    </div>    
+                    <div class="mb-3">
+                        <label class="form-label">IP</label>
+                        <input name="ip" id="editIp" class="form-control" required>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" id="editSituacao">
+                        <label class="form-check-label">Ativo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cadastro Setor -->
+<div class="modal fade" id="modalSetorCadastro" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar Setor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/setores">
+                <div class="modal-body">
+                    <div class="mb-3"> 
+                        <label class="form-label">Setor</label> 
+                        <select name="nome" id="setorDispositivoCadastro" class="form-select" required> 
+                            <option value="">Selecione um setor</option> 
+                        </select> 
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade de Leitos</label>
+                        <input name="qtd_leitos" type="number" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dispositivo</label>
+                        <select name="id_dispositivo" class="form-select">
+                            <option value="">Não vinculado</option>
+                            {% for d in dispositivos %}
+                                <option value="{{ d.id }}">{{ d.ip }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" checked>
+                        <label class="form-check-label fw-bold">Ativo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Setor -->
+<div class="modal fade" id="modalSetorEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Setor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/setores">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="editSetorId">
+                    <div class="mb-3"> 
+                        <label class="form-label">Setor</label> 
+                        <select name="nome" id="editSetorNome" class="form-select" required>
+                            <option value="">Selecione um setor</option>
+                        </select> 
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade de Leitos</label>
+                        <input name="qtd_leitos" id="editSetorLeitos" type="number" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dispositivo</label>
+                        <select name="id_dispositivo" id="editSetorDispositivo" class="form-select">
+                            <option value="">Não vinculado</option>
+                            {% for d in dispositivos %}
+                                <option value="{{ d.id }}">{{ d.ip }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="status" id="editSetorAtivo">
+                        <label class="form-check-label fw-bold">Ativo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Cadastro Usuário -->
+<div class="modal fade" id="modalUsuarioCadastro" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar Usuário</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/usuarios" autocomplete="off">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Login *</label>
+                            <input name="login" class="form-control" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome Completo</label>
+                            <input name="nome" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input name="email" type="email" class="form-control"
+                                   placeholder="opcional@exemplo.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Acesso</label>
+                            <select name="tipo" class="form-select">
+                                <option value="GERENTE">Gerente</option>
+                                <option value="ADMIN">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Checkbox de notificações -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="receber_notificacoes" id="receberNotificacoesCadastro">
+                                <label class="form-check-label fw-bold" for="receberNotificacoesCadastro">
+                                    Receber Notificações
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seleção de setores (inicialmente oculto) -->
+                    <div id="setoresContainerCadastro" style="display: none;">
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Setores para receber notificações:</label>
+                                            <!-- 🔴 NOVO: Opção "Todos os Setores" -->
+                                <div class="form-check mb-2 pb-2 border-bottom">
+                                    <input class="form-check-input setor-checkbox-cadastro-todos" 
+                                        type="checkbox" 
+                                        id="setorTodosCadastro">
+                                    <label class="form-check-label fw-bold text-primary" for="setorTodosCadastro">
+                                        <i class="bi bi-check-all"></i> Todos os Setores
+                                    </label>
+                                </div>
+                                <div class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                    {% for s in setores %}
+                                    <div class="form-check">
+                                        <input class="form-check-input setor-checkbox-cadastro" 
+                                               type="checkbox" 
+                                               name="setores[]" 
+                                               value="{{ s.id }}"
+                                               id="setorCadastro{{ s.id }}">
+                                        <label class="form-check-label" for="setorCadastro{{ s.id }}">
+                                            {{ s.nome }} ({{ s.qtd_leitos }} leitos)
+                                            {% if s.dispositivo_ip %}
+                                                - <small>{{ s.dispositivo_ip }}</small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">Selecione os setores que deseja monitorar</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="status" checked>
+                                <label class="form-check-label fw-bold">Ativo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Usuário -->
+<div class="modal fade" id="modalUsuarioEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Usuário</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="/config/usuarios" autocomplete="off">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="editUsuarioId">
+                    
+                    <!-- 🔴 CAMPO HIDDEN PARA OS SETORES (vai ser preenchido via JS) -->
+                    <input type="hidden" name="setores_selecionados" id="editSetoresSelecionados" value="">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Login</label>
+                            <input name="login"  id="editUsuarioLogin" class="form-control" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome Completo</label>
+                            <input name="nome" id="editUsuarioNome" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input name="email" id="editUsuarioEmail" type="email" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Acesso</label>
+                            <select name="tipo" id="editUsuarioTipo" class="form-select">
+                                <option value="GERENTE">Gerente</option>
+                                <option value="ADMIN">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Checkbox de notificações para edição -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="receber_notificacoes" id="editReceberNotificacoes">
+                                <label class="form-check-label fw-bold" for="editReceberNotificacoes">
+                                    Receber Notificações
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seleção de setores para edição (inicialmente oculto) -->
+                    <div id="setoresContainerEditar" style="display: none;">
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Setores para receber notificações:</label>
+                                            <!-- 🔴 NOVO: Opção "Todos os Setores" -->
+                                <div class="form-check mb-2 pb-2 border-bottom">
+                                    <input class="form-check-input setor-checkbox-editar-todos" 
+                                        type="checkbox" 
+                                        id="setorTodosEditar">
+                                    <label class="form-check-label fw-bold text-primary" for="setorTodosEditar">
+                                        <i class="bi bi-check-all"></i> Todos os Setores
+                                    </label>
+                                </div>
+                                <div class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                    {% for s in setores %}
+                                    <div class="form-check">
+                                        <input class="form-check-input setor-checkbox-editar" 
+                                               type="checkbox" 
+                                               name="setores[]" 
+                                               value="{{ s.id }}"
+                                               id="editSetor{{ s.id }}">
+                                        <label class="form-check-label" for="editSetor{{ s.id }}">
+                                            {{ s.nome }} ({{ s.qtd_leitos }} leitos)
+                                            {% if s.dispositivo_ip %}
+                                                - <small>{{ s.dispositivo_ip }}</small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">Selecione os setores que deseja monitorar</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="status" id="editUsuarioStatus">
+                                <label class="form-check-label fw-bold">Ativo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/paginaConfig.js"></script>
+
+{% endblock %}

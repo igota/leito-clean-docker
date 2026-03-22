@@ -1,0 +1,930 @@
+/* ======== TÍTULO ======== */
+h2 {
+    text-align: center;
+    font-size: 24px; /* Reduzido de 28px */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #013757;
+    margin: 0 0 15px 0; /* Reduzido de 20px */
+    flex-shrink: 0;
+}
+
+/* ======== CONTAINER PRINCIPAL ======== */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+/* ======== CARD DE FILTRO FIXO ======== */
+.card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    flex-shrink: 0;
+    margin-bottom: 20px;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* ======== BOTÕES ======== */
+.botoes {
+    max-width: 600px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px auto 0 auto;
+}
+
+.seletores {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.seletores .form-label {
+    margin-bottom: 0.2rem;
+    font-size: 1rem;
+}
+
+.seletores .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+
+
+
+
+.btn {
+    border-radius: 6px; /* Reduzido de 8px */
+    transition: all 0.2s ease;
+    padding: 0.4rem 0.75rem; /* Reduzido padding */
+    font-size: 0.9rem; /* Reduzido */
+}
+
+.btn:hover {
+    transform: scale(1.03);
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+/* ======== CONTAINER DA TABELA COM SCROLL ======== */
+.tabela-container {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden; /* Muda de auto para hidden */
+    min-height: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    border: 1px solid #ddd;
+    scroll-padding-bottom: 20px;
+}
+
+/* ======== TABELA ======== */
+.table {
+    width: 100%;
+    table-layout: fixed; /* Força larguras fixas */
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    background: #fff;
+    text-align: center;
+}
+
+/* ======== CABEÇALHO FIXO DA TABELA ======== */
+.table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+/* Distribuir as colunas proporcionalmente */
+.table th:nth-child(1),  /* Data Início */
+.table td:nth-child(1) {
+    width: 8%;
+}
+
+.table th:nth-child(2),  /* Data Fim */
+.table td:nth-child(2) {
+    width: 8%;
+}
+
+.table th:nth-child(3),  /* Data Validação */
+.table td:nth-child(3) {
+    width: 8%;
+}
+
+.table th:nth-child(4),  /* Vencimento */
+.table td:nth-child(4) {
+    width: 8%;
+}
+
+.table th:nth-child(5),  /* Setor */
+.table td:nth-child(5) {
+    width: 6%;
+}
+
+.table th:nth-child(6),  /* Leito */
+.table td:nth-child(6) {
+    width: 4%;
+}
+
+.table th:nth-child(7),  /* Paciente */
+.table td:nth-child(7) {
+    width: 10%;
+}
+
+.table th:nth-child(8),  /* ASG */
+.table td:nth-child(8) {
+    width: 10%;
+}
+
+.table th:nth-child(9),  /* Enfermeiro */
+.table td:nth-child(9) {
+    width: 10%;
+}
+
+.table th:nth-child(10), /* Tipo Limpeza */
+.table td:nth-child(10) {
+    width: 10%;
+}
+
+.table th:nth-child(11), /* Tempo */
+.table td:nth-child(11) {
+    width: 4%;
+}
+
+.table th:nth-child(12), /* Modo */
+.table td:nth-child(12) {
+    width: 7%;
+}
+
+.table th:nth-child(13),
+.table td:nth-child(13) {
+    width: 9%; /* Aumentado de 7% para 9% */
+    min-width: 100px; /* Largura mínima em pixels */
+}
+
+.table th:nth-child(14), /* Ações */
+.table td:nth-child(14) {
+    width: 5%;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #013757 !important;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    z-index: 20;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    border: 1px solid #ddd;
+    text-align: center;
+    padding: 12px 8px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.table thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.table thead th:hover {
+    background-color: #0056b3 !important;
+}
+
+.table thead th.asc::after {
+    content: ' ▲';
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.table thead th.desc::after {
+    content: ' ▼';
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+/* ======== CORPO DA TABELA ======== */
+.table tbody {
+    background-color: #fff;
+}
+
+.table tbody tr:hover {
+    background-color: #f1f3f5;
+    transition: background 0.2s;
+}
+
+.table tbody td {
+    padding: 10px 4px;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Adiciona ... se o conteúdo for muito grande */
+    background-color: #fff;
+    font-size: 0.85rem;
+}
+
+/* Permitir quebra de linha em células específicas se necessário */
+.table td:nth-child(0), 
+.table td:nth-child(1), 
+.table td:nth-child(2), 
+.table td:nth-child(3), 
+.table td:nth-child(4),  /* Paciente */
+.table td:nth-child(5),  /* Paciente */
+.table td:nth-child(6),  /* ASG */
+.table td:nth-child(7),  /* Enfermeiro */
+.table td:nth-child(8), 
+.table td:nth-child(9),  /* Tipo Limpeza */
+.table td:nth-child(10),
+.table td:nth-child(13) { /* Status - CORRIGIDO: coluna 13 */
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word; /* Propriedade moderna para quebra de palavras */
+    word-break: break-word; /* Força quebra de palavras longas */
+}
+
+/* ======== STATUS ======== */
+.status-ativo, .status-concluida {
+    background-color: #198754;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.status-inativo, .status-pendente {
+    background-color: #c22d2d;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.status-em-andamento {
+    background-color: #ffc107;
+    color: #000;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.status-aguardando-validacao {
+    background-color: #6c757d;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.modo-manual {
+    background-color: #0d6efd;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.modo-automatico {
+    background-color: #013757;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
+/* ======== ÍCONES ======== */
+.table i {
+    font-size: 1.1rem;
+}
+
+/* ======== FORMULÁRIOS ======== */
+.form-label {
+    font-weight: 500;
+    color: #013757;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.form-label .text-danger {
+    color: #c22d2d;
+    font-size: 0.9rem;
+    margin-left: 2px;
+}
+
+.form-control,
+.form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.form-select {
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.form-check-input {
+    cursor: pointer;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+}
+
+.form-check-input:checked {
+    background-color: #013757;
+    border-color: #013757;
+}
+
+input:focus, select:focus {
+    border-color: #013757 !important;
+    box-shadow: 0 0 0 0.15rem rgba(1, 55, 87, 0.25) !important;
+    outline: none;
+}
+
+/* ======== INPUT GROUPS ======== */
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-left: none;
+    padding: 0.5rem 0.75rem;
+}
+
+.input-group-text .form-check-input {
+    margin-right: 0.25rem;
+}
+
+.input-group-text .form-check-label {
+    color: #495057;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ======== CAMPOS READONLY ======== */
+input[readonly] {
+    cursor: pointer;
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}
+
+input[readonly]:hover {
+    background-color: #e9ecef;
+}
+
+/* ======== MODAIS ======== */
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background-color: #013757;
+    color: #fff;
+    border-bottom: none;
+    padding: 1.2rem 1.5rem;
+}
+
+.modal-header .modal-title {
+    font-weight: 500;
+    font-size: 1.2rem;
+    letter-spacing: 0.3px;
+}
+
+.modal-header .btn-close {
+    background-color: transparent;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    filter: brightness(0) invert(1);
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    background-color: #fff;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+}
+
+.modal-footer .btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.modal-footer .btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.modal-footer .btn-secondary:hover {
+    background-color: #5a6268;
+    transform: scale(1.02);
+}
+
+.modal-footer .btn-primary:hover {
+    background-color: #012a44;
+    transform: scale(1.02);
+}
+
+/* ======== MODAL DE BUSCA DE FUNCIONÁRIOS ======== */
+.modal#modalBuscaFuncionario {
+    z-index: 1060;
+}
+
+.modal#modalBuscaFuncionario .modal-content {
+    border: 2px solid #013757;
+}
+
+.modal#modalBuscaFuncionario .modal-header {
+    background-color: #013757;
+}
+
+.modal#modalBuscaFuncionario .input-group-text {
+    background-color: #013757;
+    color: #fff;
+    border: none;
+}
+
+.modal#modalBuscaFuncionario .input-group-text i {
+    color: #fff;
+}
+
+#buscaFuncionarioInput {
+    border: 1px solid #ced4da;
+    border-left: none;
+}
+
+#buscaFuncionarioInput:focus {
+    border-color: #013757;
+    box-shadow: 0 0 0 0.15rem rgba(1, 55, 87, 0.25);
+}
+
+/* ======== LISTA DE FUNCIONÁRIOS NO MODAL ======== */
+.lista-funcionarios {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.lista-funcionarios table {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.lista-funcionarios thead th {
+    position: sticky;
+    top: 0;
+    background-color: #013757 !important;
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    z-index: 10;
+}
+
+.lista-funcionarios tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.lista-funcionarios tbody tr:hover {
+    background-color: #f0f7ff !important;
+}
+
+.lista-funcionarios tbody tr.selecionado {
+    background-color: #cfe2ff;
+}
+
+.btn-selecionar-funcionario {
+    padding: 0.2rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    background-color: transparent;
+    border: 1px solid #013757;
+    color: #013757;
+    transition: all 0.2s ease;
+}
+
+.btn-selecionar-funcionario:hover {
+    background-color: #013757;
+    color: #fff;
+    transform: scale(1.02);
+}
+
+/* ======== PAGINAÇÃO ======== */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    color: #013757;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-pagination {
+    background-color: #fff;
+    border: 1px solid #013757;
+    color: #013757;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 40px;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background-color: #013757;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.btn-pagination:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-pagination.active {
+    background-color: #013757;
+    color: #fff;
+    border-color: #013757;
+}
+
+.pagination-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-size-selector select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.4rem 2.5rem 0.4rem 1rem;
+    color: #013757;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23013757' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 14px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.pagination-size-selector select:focus {
+    border-color: #013757;
+    box-shadow: 0 0 0 0.15rem rgba(1, 55, 87, 0.25);
+    outline: none;
+}
+
+/* ======== MENU DE NAVEGAÇÃO FIXO ======== */
+.pagination-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    display: none;
+    padding: 5px 0;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 2px solid #013757;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.pagination-fixed.visible {
+    display: block;
+}
+
+.pagination-fixed .pagination-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.pagination-fixed .pagination-info {
+    color: #013757;
+    font-weight: 600;
+    font-size: 0.95rem;
+    background: rgba(1, 55, 87, 0.1);
+    padding: 5px 15px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.pagination-fixed .pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-fixed .btn-pagination {
+    background-color: #fff;
+    border: 1px solid #013757;
+    color: #013757;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 45px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-fixed .btn-pagination:hover:not(:disabled) {
+    background-color: #013757;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(1, 55, 87, 0.3);
+}
+
+.pagination-fixed .btn-pagination.active {
+    background-color: #013757;
+    color: #fff;
+    border-color: #013757;
+}
+
+.pagination-fixed .pagination-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(1, 55, 87, 0.1);
+    padding: 5px 15px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* ======== AJUSTE PARA MENU LATERAL ======== */
+body.has-sidebar .pagination-fixed,
+body:has(.menu) .pagination-fixed {
+    left: 120px !important;
+    width: calc(100% - 120px) !important;
+    right: 0 !important;
+    box-sizing: border-box;
+}
+
+/* ======== VERSÃO ULTRA-AGRESSIVA PARA MODAL DE BUSCA ======== */
+body:has(#modalBuscaFuncionario.show) {
+    overflow: hidden !important;
+}
+
+body:has(#modalBuscaFuncionario.show) .modal:not(#modalBuscaFuncionario) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+
+body:has(#modalBuscaFuncionario.show) #modalBuscaFuncionario {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 1060 !important;
+}
+
+body:has(#modalBuscaFuncionario.show) .modal-backdrop {
+    z-index: 1050 !important;
+}
+
+body:has(#modalBuscaFuncionario.show) .modal-backdrop ~ .modal-backdrop {
+    display: none !important;
+}
+
+/* ======== ALERTAS ======== */
+#alertCadastroLimpeza,
+#alertEdicaoLimpeza {
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* ======== SCROLLBAR PERSONALIZADA ======== */
+.tabela-container::-webkit-scrollbar,
+.lista-funcionarios::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.tabela-container::-webkit-scrollbar-track,
+.lista-funcionarios::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb,
+.lista-funcionarios::-webkit-scrollbar-thumb {
+    background: #013757;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb:hover,
+.lista-funcionarios::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+
+/* No final do arquivo, adicione: */
+
+/* ======== AJUSTE DO ESPAÇAMENTO INFERIOR ======== */
+
+/* Adiciona padding inferior no container quando o menu de paginação está visível */
+body:has(.pagination-fixed.visible) .container {
+    padding-bottom: 70px; /* Espaço para o menu de paginação */
+}
+
+/* Ajuste na tabela para respeitar o padding */
+body:has(.pagination-fixed.visible) .tabela-container {
+    height: calc(100% - 70px) !important; /* Ajusta altura considerando o padding */
+    margin-bottom: 0;
+}
+
+/* Garante que o último item da tabela não fique escondido */
+.tabela-container {
+    scroll-padding-bottom: 20px; /* Espaço extra no final do scroll */
+}
+
+/* Opcional: adicionar uma sombra ou linha divisória sutil */
+.pagination-fixed.visible {
+    border-top: 2px solid #013757;
+    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Ajuste fino para quando o menu está visível */
+.pagination-fixed.visible ~ .container .tabela-container {
+    margin-bottom: 10px;
+}
+
+/* ======== ANIMAÇÕES ======== */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.pagination-fixed.visible {
+    animation: slideUp 0.3s ease forwards;
+}
+
+/* ======== RESPONSIVIDADE ======== */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+
+    .botoes {
+        flex-direction: column;
+        max-width: 100%;
+    }
+
+    .seletores {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table thead th {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+
+    .table tbody td {
+        padding: 6px 4px;
+    }
+
+    .pagination-fixed {
+        padding: 8px 0;
+    }
+
+    body.has-sidebar .pagination-fixed,
+    body:has(.menu) .pagination-fixed {
+        left: 0 !important;
+        width: 100% !important;
+    }
+
+    .pagination-fixed .pagination-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pagination-fixed .pagination-info,
+    .pagination-fixed .pagination-size-selector {
+        white-space: normal;
+        width: 90%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination-fixed .pagination-container {
+        gap: 5px;
+    }
+
+    body:has(.pagination-fixed.visible) {
+        padding-bottom: 120px;
+    }
+}

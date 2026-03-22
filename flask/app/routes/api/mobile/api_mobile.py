@@ -1,0 +1,844 @@
+from venv import logger
+
+from flask import Blueprint, request, jsonify  # 👈 MUDAR para Blueprint
+from datetime import datetime, timedelta
+import os
+import json
+import logging
+from ....config.settings import LEITOS_CACHE_FILE, atualizacao_evento
+from ....database.conexao import get_db_connection
+from ....utils.helpers import get_client_ip
+from ....scheduler.scheduler import agendar_nova_limpeza, agendar_alertas_limpeza, cancelar_alertas_limpeza_antiga
+from ....events.redis_events import publicar_evento 
+
+# 👇 CRIAR O BLUEPRINT
+mobile_api_bp = Blueprint('mobile_api', __name__)
+
+
+# ==================== FUNÇÕES AUXILIARES ====================
+
+def encontrar_limpeza_antiga(setor, numero_leito):
+    """Busca o ID da limpeza mais recente antes da nova (que será substituída)"""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id
+                FROM registro_limpeza
+                WHERE setor = %s
+                  AND numero_leito = %s
+                  AND status = 'CONCLUIDA'
+                ORDER BY data_validacao DESC
+                LIMIT 1
+            """, (setor, numero_leito))
+            
+            resultado = cursor.fetchone()
+            return resultado['id'] if resultado else None
+    except Exception as e:
+        logging.error(f"Erro ao buscar limpeza antiga: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+# ==================== ROTAS ====================
+
+@mobile_api_bp.route("/api/carregar_leitos", methods=['GET'])
+def carregar_leitos():
+    try:
+        ip = get_client_ip()
+
+        # Abre o JSON gerado pela thread
+        with open(LEITOS_CACHE_FILE, "r", encoding="utf-8") as f:
+            cache = json.load(f)
+
+        if ip not in cache:
+            return jsonify({
+                "status": "erro",
+                "mensagem": f"Nenhum dado disponível para o IP {ip}"
+            }), 404
+
+        dados_ip = cache[ip]["leitos"]
+
+        # Extrai setores únicos
+        setores = sorted({item["setor"] for item in dados_ip})
+
+        return jsonify({
+            "status": "ok",
+            "setores": setores,
+            "ultima_atualizacao": cache[ip]["ultima_atualizacao"]
+        })
+
+    except FileNotFoundError:
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Cache ainda não foi gerado"
+        }), 503
+
+    except Exception as e:
+        logging.error(f"Erro em /carregar_leitos: {e}")
+        return jsonify({
+            "status": "erro",
+            "mensagem": str(e)
+        }), 500
+
+
+@mobile_api_bp.route("/api/limpeza_ativa_por_ip", methods=['GET'])
+def limpeza_ativa_por_ip():
+    ip = get_client_ip()
+    
+    print(f"[LOG] IP detectado: {ip}")
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    r.id,
+                    r.setor,
+                    r.numero_leito,
+                    r.tipo_limpeza,
+                    r.data_inicio,
+                    r.status,
+                    f.nome as funcionario_asg,
+                    TIMESTAMPDIFF(SECOND, r.data_inicio, NOW()) AS segundos_decorridos
+                FROM registro_limpeza r
+                LEFT JOIN funcionarios f ON r.id_cartao_asg = f.id_cartao
+                WHERE r.ip_dispositivo = %s
+                  AND r.status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
+                ORDER BY r.data_inicio ASC
+                LIMIT 2
+            """, (ip,))
+
+            limpezas = cursor.fetchall()
+            
+            print(f"[LOG] Limpezas encontradas: {len(limpezas)}")
+
+            resultado = []
+            for l in limpezas:
+                item = dict(l)
+                if isinstance(item.get("data_inicio"), datetime):
+                    item["data_inicio"] = item["data_inicio"].strftime("%Y-%m-%d %H:%M:%S")
+                resultado.append(item)
+
+            return jsonify({
+                "existe": bool(resultado),
+                "limpezas": resultado
+            })
+
+    finally:
+        conn.close()
+
+
+@mobile_api_bp.route("/api/get_leitos_por_setor", methods=['GET'])
+def get_leitos_por_setor():
+    setor = request.args.get("setor")
+    ip_cliente = get_client_ip()
+
+    logging.info(f"➡️ IP do cliente: {ip_cliente}")
+    logging.info(f"➡️ Setor solicitado: {setor}")
+
+    if not setor:
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Setor não informado"
+        }), 400
+
+    # Busca qtd_leitos no banco
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.qtd_leitos
+                FROM setores s
+                JOIN dispositivos d ON s.id_dispositivo = d.id
+                WHERE d.ip = %s
+                AND s.nome = %s
+                AND d.status = TRUE
+                AND s.status = TRUE
+                LIMIT 1
+            """, (ip_cliente, setor))
+
+            row = cursor.fetchone()
+        conn.close()
+
+        if not row or row["qtd_leitos"] is None:
+            return jsonify({
+                "status": "erro",
+                "mensagem": "Quantidade de leitos não configurada para este setor"
+            }), 404
+
+        total_fixos = int(row["qtd_leitos"])
+
+    except Exception:
+        logging.exception("Erro ao buscar qtd_leitos em dispositivos")
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Erro ao consultar configuração de leitos"
+        }), 500
+
+    # Carrega cache de leitos
+    caminho_json = LEITOS_CACHE_FILE
+
+    if not os.path.exists(caminho_json):
+        logging.error(f"❌ JSON não encontrado: {caminho_json}")
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Dados não disponíveis"
+        }), 404
+
+    try:
+        with open(caminho_json, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON inválido: {e}")
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Formato de dados inválido"
+        }), 500
+    except Exception:
+        logging.exception("Erro ao ler JSON de cache")
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Erro ao ler dados"
+        }), 500
+
+    dados_ip = dados.get(ip_cliente)
+
+    if not dados_ip:
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Nenhum dado encontrado para este dispositivo"
+        }), 404
+
+    leitos_setor = [
+        l for l in dados_ip.get("leitos", [])
+        if l.get("setor") == setor
+    ]
+
+    logging.info(f"📦 Registros no setor '{setor}': {len(leitos_setor)}")
+
+    # Busca leitos pendentes no banco
+    leitos_pendentes = set()
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT numero_leito
+                FROM registro_limpeza r1
+                WHERE setor = %s
+                AND data_inicio = (
+                    SELECT MAX(data_inicio)
+                    FROM registro_limpeza r2
+                    WHERE r2.numero_leito = r1.numero_leito
+                        AND r2.setor = r1.setor
+                )
+                AND status = 'PENDENTE'
+            """, (setor,))
+            
+            for row in cursor.fetchall():
+                leitos_pendentes.add(row["numero_leito"])
+        conn.close()
+        logging.info(f"🔴 Leitos pendentes no setor {setor}: {leitos_pendentes}")
+    except Exception:
+        logging.exception("Erro ao buscar leitos pendentes")
+
+    # Separa leitos fixos e extras
+    leitos_fixos_ocupados = []
+    leitos_extras = []
+    todos_leitos_processados = []
+
+    for l in leitos_setor:
+        numero_leito = (l.get("numero_leito") or "").strip()
+        tem_paciente = bool(l.get("paciente"))
+        
+        if numero_leito in leitos_pendentes:
+            icone = "vermelho"
+            status = "pendente"
+        elif tem_paciente:
+            icone = "amarelo"
+            status = "ocupado"
+        else:
+            icone = "verde"
+            status = "livre"
+        
+        leito_processado = {
+            "numero_str": numero_leito,
+            "paciente": l.get("paciente"),
+            "icone": icone,
+            "status": status,
+            "dados": l
+        }
+        todos_leitos_processados.append(leito_processado)
+        
+        if numero_leito.isdigit():
+            leito_processado["numero_int"] = int(numero_leito)
+            leitos_fixos_ocupados.append(leito_processado)
+        else:
+            leitos_extras.append(leito_processado)
+
+    # Lógica de preenchimento
+    resultado = []
+    
+    total_existentes = len(leitos_fixos_ocupados) + len(leitos_extras)
+    logging.info(f"📊 Leitos existentes: {total_existentes} (fixos: {len(leitos_fixos_ocupados)}, extras: {len(leitos_extras)})")
+    
+    numeros_ocupados = {item["numero_int"] for item in leitos_fixos_ocupados}
+    
+    if total_existentes >= total_fixos:
+        logging.info(f"✅ Já tem leitos suficientess ({total_existentes} >= {total_fixos})")
+        
+        for fixo in sorted(leitos_fixos_ocupados, key=lambda x: x["numero_int"]):
+            resultado.append({
+                "numero_leito": fixo["numero_str"],
+                "setor": setor,
+                "tipo": "fixo",
+                "status": fixo["status"],
+                "icone": fixo["icone"],
+                "paciente": fixo["paciente"]
+            })
+        
+        slots_restantes = total_fixos - len(leitos_fixos_ocupados)
+        if slots_restantes > 0:
+            for extra in leitos_extras[:slots_restantes]:
+                resultado.append({
+                    "numero_leito": extra["numero_str"],
+                    "setor": setor,
+                    "tipo": "extra",
+                    "status": extra["status"],
+                    "icone": extra["icone"],
+                    "paciente": extra["paciente"]
+                })
+        
+        if len(leitos_extras) > slots_restantes:
+            for extra in leitos_extras[slots_restantes:]:
+                resultado.append({
+                    "numero_leito": extra["numero_str"],
+                    "setor": setor,
+                    "tipo": "extra_excedente",
+                    "status": extra["status"],
+                    "icone": extra["icone"],
+                    "paciente": extra["paciente"]
+                })
+    
+    else:
+        leitos_faltando = total_fixos - total_existentes
+        logging.info(f"📝 Faltam {leitos_faltando} leitos para completar {total_fixos}")
+        
+        for fixo in sorted(leitos_fixos_ocupados, key=lambda x: x["numero_int"]):
+            resultado.append({
+                "numero_leito": fixo["numero_str"],
+                "setor": setor,
+                "tipo": "fixo",
+                "status": fixo["status"],
+                "icone": fixo["icone"],
+                "paciente": fixo["paciente"]
+            })
+        
+        for extra in leitos_extras:
+            resultado.append({
+                "numero_leito": extra["numero_str"],
+                "setor": setor,
+                "tipo": "extra",
+                "status": extra["status"],
+                "icone": extra["icone"],
+                "paciente": extra["paciente"]
+            })
+        
+        leitos_livres_adicionados = 0
+        numero_atual = 1
+        
+        while leitos_livres_adicionados < leitos_faltando:
+            if numero_atual not in numeros_ocupados:
+                numero_str = str(numero_atual).zfill(2)
+                if numero_str in leitos_pendentes:
+                    icone = "vermelho"
+                    status = "pendente"
+                else:
+                    icone = "verde"
+                    status = "livre"
+                
+                resultado.append({
+                    "numero_leito": numero_str,
+                    "setor": setor,
+                    "tipo": "fixo",
+                    "status": status,
+                    "icone": icone,
+                    "paciente": None
+                })
+                leitos_livres_adicionados += 1
+            numero_atual += 1
+
+    # Ordenação final
+    resultado.sort(key=lambda x: (
+        0 if x["tipo"] == "fixo" else (1 if x["tipo"] == "extra" else 2),
+        int(x["numero_leito"]) if x["numero_leito"].isdigit() else 99999,
+        x["numero_leito"]
+    ))
+
+    # Contagem de pendentes
+    pendentes_no_setor = len([l for l in todos_leitos_processados 
+                            if l["numero_str"] in leitos_pendentes])
+    
+    pendentes_nos_leitos_virtuais = len([l for l in resultado 
+                                       if l["status"] == "pendente" and l["paciente"] is None])
+    
+    total_pendentes_real = pendentes_no_setor + pendentes_nos_leitos_virtuais
+    
+    ocupados_com_paciente = len([l for l in todos_leitos_processados if l["paciente"]])
+    pendentes_com_paciente = len([l for l in todos_leitos_processados 
+                                 if l["paciente"] and l["numero_str"] in leitos_pendentes])
+    pendentes_sem_paciente = len([l for l in todos_leitos_processados 
+                                 if not l["paciente"] and l["numero_str"] in leitos_pendentes])
+
+    logging.info(f"📊 Total leitos retornados: {len(resultado)}")
+    logging.info(f"🔴 Total pendentes REAL: {total_pendentes_real}")
+
+    return jsonify({
+        "status": "ok",
+        "configuracao": {
+            "total_fixos": total_fixos,
+            "ocupados": len(leitos_fixos_ocupados) + min(len(leitos_extras), total_fixos - len(leitos_fixos_ocupados)),
+            "livres": max(0, total_fixos - (len(leitos_fixos_ocupados) + len(leitos_extras))),
+            "extras": len(leitos_extras),
+            "pendentes": total_pendentes_real,
+            "pendentes_com_paciente": pendentes_com_paciente,
+            "pendentes_sem_paciente": pendentes_sem_paciente + pendentes_nos_leitos_virtuais
+        },
+        "leitos": resultado
+    })
+
+
+@mobile_api_bp.route('/api/verificar_funcionarios', methods=['POST'])
+def verificar_funcionarios():
+    dados = request.json
+    id_cartao = dados.get("id_cartao")
+    tipo = dados.get("tipo")
+
+    if not id_cartao or not tipo:
+        return jsonify({"erro": "id_cartao ou tipo não informados"}), 400
+
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT nome FROM funcionarios
+                WHERE id_cartao = %s AND tipo = %s AND status = 1
+            """, (id_cartao, tipo))
+            funcionarios = cursor.fetchone()
+
+        conn.close()
+
+        if funcionarios:
+            return jsonify({"sucesso": True, "nome": funcionarios['nome']})
+        else:
+            return jsonify({"sucesso": False, "erro": "Funcionário não encontrado ou inativo"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
+@mobile_api_bp.route("/api/limpeza/aguardando_validacao", methods=["POST"])
+def limpeza_aguardando_validacao():
+    dados = request.json
+    id_limpeza = dados.get("id_limpeza")
+
+    if not id_limpeza:
+        return jsonify({"erro": "ID da limpeza obrigatório"}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Buscar dados da limpeza (incluindo setor e leito para o evento)
+            cursor.execute("""
+                SELECT data_inicio, status, setor, numero_leito
+                FROM registro_limpeza
+                WHERE id = %s
+            """, (id_limpeza,))
+            
+            limpeza = cursor.fetchone()
+            
+            if not limpeza:
+                return jsonify({"erro": "Limpeza não encontrada"}), 404
+                
+            if limpeza["status"] != "EM_ANDAMENTO":
+                return jsonify({"erro": "Limpeza não está em andamento"}), 400
+            
+            setor = limpeza["setor"]
+            leito = limpeza["numero_leito"]
+            data_inicio = limpeza["data_inicio"]
+            agora = datetime.now()
+            minutos_decorridos = (agora - data_inicio).total_seconds() / 60
+            
+            if minutos_decorridos < 1:
+                minutos_faltantes = round(1 - minutos_decorridos, 1)
+                return jsonify({
+                    "erro": "TEMPO_MINIMO_NAO_ATINGIDO",
+                    "mensagem": f"Tempo mínimo de 1 minutos não atingido. Aguarde mais {minutos_faltantes} minutos.",
+                    "minutos_decorridos": round(minutos_decorridos, 1),
+                    "minutos_faltantes": minutos_faltantes
+                }), 400
+
+            cursor.execute("""
+                UPDATE registro_limpeza
+                SET status = 'AGUARDANDO_VALIDACAO',
+                    data_fim = NOW()
+                WHERE id = %s
+                  AND status = 'EM_ANDAMENTO'
+            """, (id_limpeza,))
+
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "Limpeza não encontrada ou status inválido"}), 404
+
+        conn.commit()
+        
+        
+        atualizacao_evento.set()
+        
+       
+        
+        publicar_evento('limpeza_aguardando_validacao', {
+            'id': id_limpeza,
+            'setor': setor,
+            'leito': leito,
+            'minutos_decorridos': round(minutos_decorridos, 1),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            "mensagem": "Limpeza finalizada (aguardando validação)",
+            "minutos_decorridos": round(minutos_decorridos, 1)
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ ERRO em limpeza_aguardando_validacao: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@mobile_api_bp.route('/api/registrar_limpeza', methods=['POST'])
+def registrar_limpeza():
+    dados = request.json
+    print("📩 Dados recebidos:", dados)
+
+    ip_dispositivo = get_client_ip()
+    print("📡 IP do dispositivo:", ip_dispositivo)
+
+    id_limpeza = dados.get("id_limpeza")
+
+    # Início
+    id_cartao_asg = dados.get("id_cartao_asg")
+
+    # Finalização
+    id_cartao_enf = dados.get("id_cartao_enf")
+
+    leito = dados.get("leito", {})
+    numero_leito = leito.get("numero_leito")
+    setor = leito.get("setor")
+    paciente = leito.get("paciente")
+
+    tipo_limpeza = dados.get("tipo_limpeza")
+    
+    # Dados de tempo da requisição
+    tempo_total_seconds = dados.get("tempo_total_seconds")
+    tempo_total_text = dados.get("tempo_total_text")
+
+    conn = get_db_connection()
+
+    try:
+        with conn.cursor() as cursor:
+
+            # =============================
+            # 🔹 INÍCIO DA LIMPEZA
+            # =============================
+            if not id_cartao_enf:
+
+                if not numero_leito or not tipo_limpeza:
+                    return jsonify({
+                        "erro": "Número do leito e tipo de limpeza são obrigatórios"
+                    }), 400
+
+                cursor.execute("""
+                    SELECT COUNT(*) AS total
+                    FROM registro_limpeza
+                    WHERE ip_dispositivo = %s
+                      AND status = 'EM_ANDAMENTO'
+                """, (ip_dispositivo,))
+
+                total = cursor.fetchone()["total"]
+
+                if total >= 2:
+                    return jsonify({
+                        "erro": "LIMITE_ATINGIDO",
+                        "mensagem": "Este tablet já possui 2 limpezas em andamento."
+                    }), 400
+
+                # Tratar paciente null/vazio
+                if not paciente or paciente.strip() == "":
+                    paciente_para_inserir = "S/P"
+                else:
+                    paciente_para_inserir = paciente
+
+                cursor.execute("""
+                    INSERT INTO registro_limpeza (
+                        id_cartao_asg,
+                        ip_dispositivo,
+                        numero_leito,
+                        paciente,
+                        setor,
+                        tipo_limpeza,
+                        status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, 'EM_ANDAMENTO')
+                """, (
+                    id_cartao_asg,
+                    ip_dispositivo,
+                    numero_leito,
+                    paciente_para_inserir,
+                    setor,
+                    tipo_limpeza
+                ))
+
+                id_gerado = cursor.lastrowid
+                conn.commit()
+
+              
+                atualizacao_evento.set()
+                
+                from ....events.redis_events import publicar_evento
+                from datetime import datetime
+                
+                publicar_evento('limpeza_iniciada', {
+                    'id': id_gerado,
+                    'setor': setor,
+                    'leito': numero_leito,
+                    'asg': id_cartao_asg,
+                    'ip': ip_dispositivo,
+                    'timestamp': datetime.now().isoformat()
+                })
+
+                return jsonify({
+                    "mensagem": "Limpeza iniciada com sucesso!",
+                    "id_limpeza": id_gerado
+                })
+
+            # =============================
+            # 🔹 FINALIZAÇÃO (VALIDAÇÃO DO ENFERMEIRO)
+            # =============================
+            else:
+                if not id_limpeza:
+                    return jsonify({
+                        "erro": "ID da limpeza é obrigatório para finalizar"
+                    }), 400
+
+                data_validacao = datetime.now()
+
+                # Busca os dados completos da limpeza (incluindo setor/leito)
+                cursor.execute("""
+                    SELECT tipo_limpeza, data_fim, setor, numero_leito
+                    FROM registro_limpeza
+                    WHERE id = %s
+                """, (id_limpeza,))
+                row = cursor.fetchone()
+
+                if not row:
+                    return jsonify({"erro": "Limpeza não encontrada"}), 404
+
+                tipo_limpeza_db = row["tipo_limpeza"] or ""
+                tipo_norm = tipo_limpeza_db.strip().upper()
+                data_fim = row["data_fim"]
+                setor = row["setor"]
+                leito = row["numero_leito"]
+                
+                if not data_fim:
+                    return jsonify({
+                        "erro": "Data de fim não encontrada. Finalize primeiro a limpeza."
+                    }), 400
+
+                print("🧪 tipo_limpeza banco:", repr(tipo_limpeza_db))
+                print(f"📅 Data fim original: {data_fim}")
+                print(f"📅 Data validação: {data_validacao}")
+
+                # 👇 ANTES DE FINALIZAR A NOVA, CANCELA OS TIMERS DA LIMPEZA ANTIGA
+                limpeza_antiga_id = encontrar_limpeza_antiga(setor, leito)
+                
+                if limpeza_antiga_id:
+                    logging.info(f"🔄 Encontrada limpeza antiga {limpeza_antiga_id} para cancelar")
+                    cancelar_alertas_limpeza_antiga(limpeza_antiga_id)
+
+                # Define vencimento
+                vencimento = None
+                if tipo_norm in ("ALTA / ÓBITO / TRANSFERÊNCIA", 
+                                "LONGA PERMANÊNCIA", 
+                                "LONGA PERMANENCIA"):
+                    vencimento = data_validacao + timedelta(days=8)
+
+                # UPDATE finalizando
+                cursor.execute("""
+                    UPDATE registro_limpeza
+                    SET id_cartao_enf = %s,
+                        data_validacao = %s,
+                        tempo_total_seconds = %s,
+                        tempo_total_text = %s,
+                        status = 'CONCLUIDA',
+                        vencimento = %s
+                    WHERE id = %s
+                    AND status = 'AGUARDANDO_VALIDACAO'
+                """, (
+                    id_cartao_enf,
+                    data_validacao,
+                    tempo_total_seconds,
+                    tempo_total_text,
+                    vencimento,
+                    id_limpeza
+                ))
+
+                if cursor.rowcount == 0:
+                    return jsonify({
+                        "erro": "Limpeza não encontrada em AGUARDANDO_VALIDACAO"
+                    }), 404
+
+                conn.commit()
+
+                # 👇 AGENDAR TIMERS PARA A NOVA LIMPEZA
+                if vencimento:
+                    agendar_nova_limpeza(id_limpeza, vencimento)
+                    logging.info(f"📅 Limpeza {id_limpeza} agendada para vencimento em {vencimento}")
+                
+                if data_validacao:
+                    agendar_alertas_limpeza(id_limpeza, data_validacao)
+                    logging.info(f"📅 Alertas 5/6/7 dias agendados para limpeza {id_limpeza}")
+
+               
+                atualizacao_evento.set()
+                
+               
+                
+                publicar_evento('limpeza_finalizada', {
+                    'id': id_limpeza,
+                    'setor': setor,
+                    'leito': leito,
+                    'tipo_limpeza': tipo_limpeza_db,
+                    'enf': id_cartao_enf,
+                    'vencimento': vencimento.isoformat() if vencimento else None,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                # Se cancelou uma limpeza antiga, publicar evento também
+                if limpeza_antiga_id:
+                    publicar_evento('limpeza_antiga_cancelada', {
+                        'id_antiga': limpeza_antiga_id,
+                        'id_nova': id_limpeza,
+                        'setor': setor,
+                        'leito': leito,
+                        'timestamp': datetime.now().isoformat()
+                    })
+
+                return jsonify({
+                    "mensagem": "Limpeza validada com sucesso!",
+                    "id_limpeza": id_limpeza,
+                    "vencimento": vencimento.strftime("%Y-%m-%d %H:%M:%S") if vencimento else None
+                })
+
+    except Exception as e:
+        conn.rollback()
+        print("❌ ERRO:", e)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"erro": str(e)}), 500
+
+    finally:
+        conn.close()
+
+@mobile_api_bp.route("/api/verificar_limpeza_ativa", methods=["POST"])
+def verificar_limpeza_ativa():
+    data = request.get_json()
+    leito = data.get("leito")
+    ip = get_client_ip()
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("""
+                SELECT 1
+                FROM registro_limpeza
+                WHERE setor = %s
+                  AND numero_leito = %s
+                 AND status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
+                LIMIT 1
+            """, (leito["setor"], leito["numero_leito"]))
+
+            if cursor.fetchone():
+                return jsonify({
+                    "limpeza_ativa": True,
+                    "motivo": "LEITO_OCUPADO",
+                    "mensagem": "Este leito já possui uma limpeza em andamento."
+                })
+
+            cursor.execute("""
+                SELECT COUNT(*) AS total
+                FROM registro_limpeza
+                WHERE ip_dispositivo = %s
+                  AND status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
+            """, (ip,))
+
+            total = cursor.fetchone()["total"]
+
+            if total >= 2:
+                return jsonify({
+                    "limpeza_ativa": True,
+                    "motivo": "LIMITE_TABLET",
+                    "mensagem": "Este dispositivo já possui 2 limpezas em andamento."
+                })
+
+            return jsonify({
+                "limpeza_ativa": False,
+                "mensagem": "Limpeza liberada para início."
+            })
+
+    finally:
+        conn.close()
+
+
+@mobile_api_bp.route("/api/verificar_limpeza_funcionario", methods=["POST"])
+def verificar_limpeza_funcionario():
+    data = request.get_json()
+    id_cartao = data.get("id_cartao")
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            
+            cursor.execute("""
+                SELECT 1
+                FROM registro_limpeza
+                WHERE (id_cartao_asg = %s 
+                       OR id_cartao_enf = %s 
+                       OR id_cartao_tec = %s)
+                  AND status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
+                LIMIT 1
+            """, (id_cartao, id_cartao, id_cartao))
+            
+            if cursor.fetchone():
+                return jsonify({
+                    "limpeza_ativa": True,
+                    "motivo": "FUNCIONARIO_OCUPADO",
+                    "mensagem": "Este funcionário já está envolvido em uma limpeza em andamento."
+                })
+            
+            return jsonify({
+                "limpeza_ativa": False,
+                "mensagem": "Funcionário liberado para nova limpeza."
+            })
+            
+    except Exception as e:
+        print(f"Erro ao verificar limpeza do funcionário: {e}")
+        return jsonify({
+            "limpeza_ativa": False,
+            "mensagem": "Erro na verificação, permitindo continuar."
+        }), 500
+    finally:
+        conn.close()

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block content %}
+<title>Leito Clean - Justificativas</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/paginaJustificativas.css') }}">
+
+<div class="container">
+    <h2 class="titulo-pagina">Justificativas</h2>
+
+    <!-- 🔍 Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="formBusca" class="row g-3" onsubmit="pesquisarJustificativas(event)">
+
+                <div class="seletores">
+                    <div class="col-md-4">
+                        <label class="form-label">Setor</label>
+                        <select id="selectSetor" class="form-select" style="cursor: pointer;">
+                            <option value="">Todos os setores</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Leito</label>
+                        <select id="selectLeito" class="form-select" style="cursor: pointer;" >
+                            <option value="">Todos os leitos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="botoes">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+
+                    <button type="button" class="btn btn-outline-danger w-100" onclick="limparPesquisa()">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalJustificativa" onclick="abrirModalNova()">
+                        <i class="bi bi-plus-circle"></i>  Nova Justificativa
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- 📋 Tabela -->
+    <div class="tabela-container">
+        <table class="table table-striped table-bordered" id="tabelaJustificativas">
+            <thead class="table-dark">
+                <tr>
+                    
+                    <th>SETOR</th>
+                    <th>LEITO</th>
+                    <th>DATA CRIAÇÃO</th>
+                    <th>CRIADO POR</th>  <!-- NOVA COLUNA -->
+                    <th>ÚLTIMA ATUALIZAÇÃO</th>
+                    <th>EDITADO POR</th>  <!-- NOVA COLUNA -->
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Menu de Navegação Fixo (inicialmente escondido) -->
+<div class="pagination-fixed" id="paginationFixed">
+    <div class="pagination-container">
+        <div class="pagination-info" id="paginationInfo"></div>
+        <div class="pagination-controls" id="paginationControls"></div>
+        <div class="pagination-size-selector">
+            <label for="itemsPerPageFixed">Itens/página:</label>
+            <select id="itemsPerPageFixed" class="form-select form-select-sm">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- 🪟 Modal de Justificativa (Nova/Edição) -->
+<div class="modal fade" id="modalJustificativa" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitulo">Nova Justificativa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formJustificativa" onsubmit="salvarJustificativa(event)">
+                    
+                    <div id="alertJustificativa" style="display:none;" class="alert alert-danger py-2"></div>
+                    
+                    <input type="hidden" id="justificativaId">
+
+                    <!-- Linha 1: Setor e Leito -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Setor <span class="text-danger">*</span></label>
+                            <select id="modalSetor" class="form-select" style="cursor: pointer;" required>
+                                <option value="">Selecione um setor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Leito <span class="text-danger">*</span></label>
+                            <select id="modalLeito" class="form-select" style="cursor: pointer;" required disabled>
+                                <option value="">Primeiro selecione um setor</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Linha 2: Editor de Texto -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Justificativa <span class="text-danger">*</span></label>
+                            
+                            <!-- Barra de ferramentas - ATUALIZADA -->
+                            <div class="editor-toolbar mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('bold')" title="Negrito">
+                                    <i class="bi bi-type-bold"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('italic')" title="Itálico">
+                                    <i class="bi bi-type-italic"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('underline')" title="Sublinhado">
+                                    <i class="bi bi-type-underline"></i>
+                                </button>
+                                <span class="mx-1">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('justifyLeft')" title="Alinhar à esquerda">
+                                    <i class="bi bi-text-left"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('justifyCenter')" title="Centralizar">
+                                    <i class="bi bi-text-center"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('justifyRight')" title="Alinhar à direita">
+                                    <i class="bi bi-text-right"></i>
+                                </button>
+                                <span class="mx-1">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('insertUnorderedList')" title="Lista com marcadores">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('insertOrderedList')" title="Lista numerada">
+                                    <i class="bi bi-list-ol"></i>
+                                </button>
+                                <span class="mx-1">|</span>
+                                
+                               
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFundo()" title="Limpar Formatação">
+                                    <i class="bi bi-eraser"></i> Limpar
+                                </button>
+                                <span class="mx-1">|</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('undo')" title="Desfazer">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatarTexto('redo')" title="Refazer">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Área de texto editável -->
+                            <div id="editorJustificativa" class="editor-conteudo form-control" contenteditable="true" style="min-height: 200px; overflow-y: auto;" required></div>
+                            <small class="text-muted">Digite ou formate o texto da justificativa</small>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- 🪟 Modal de Visualização - Versão 3 colunas -->
+<div class="modal fade" id="modalVisualizarJustificativa" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-text"></i> Justificativa
+                </h5>
+                
+                <!-- CORREÇÃO: Usar data-bs-dismiss -->
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Título com Setor/Leito -->
+                <div class="alert alert-primary text-center mb-3">
+                    <strong id="visualizarSetorLeito" class="h6"></strong>
+                </div>
+                
+                <!-- Informações em 3 colunas -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-fill-add fs-4 text-success"></i>
+                                <h6 class="card-subtitle mb-2 text-muted">Criado por</h6>
+                                <p id="visualizarCriadoPor" class="card-text fw-bold"></p>
+                                <small id="visualizarDataCriacao" class="text-muted"></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-fill-gear fs-4 text-warning"></i>
+                                <h6 class="card-subtitle mb-2 text-muted">Editado por</h6>
+                                <p id="visualizarEditadoPor" class="card-text fw-bold"></p>
+                                <small id="visualizarDataAtualizacao" class="text-muted"></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-clock-history fs-4 text-info"></i>
+                                <h6 class="card-subtitle mb-2 text-muted">Versões</h6>
+                                <p class="card-text fw-bold" id="visualizarTotalVersoes">1</p>
+                                <small>
+                                    <button class="btn btn-sm btn-outline-info" onclick="verVersoes(visualizarConteudo.dataset.id)">
+                                        Ver histórico
+                                    </button>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Conteúdo da Justificativa -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <strong><i class="bi bi-chat-text"></i> Conteúdo</strong>
+                    </div>
+                    <div class="card-body">
+                        <div id="visualizarConteudo" class="p-3 bg-white rounded border" 
+                             style="min-height: 200px; max-height: 300px; overflow-y: auto; 
+                                    word-wrap: break-word; white-space: pre-wrap;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <!-- CORREÇÃO: Usar data-bs-dismiss -->
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- 🪟 NOVO MODAL: Histórico de Versões -->
+<div class="modal fade" id="modalHistoricoVersoes" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-clock-history"></i> Histórico de Versões
+                </h5>
+                
+                <!-- CORREÇÃO: Usar data-bs-dismiss -->
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Localização atual -->
+                <div class="alert alert-info mb-3" id="historicoLocalizacao">
+                    Carregando...
+                </div>
+
+                <!-- Timeline de versões -->
+                <div class="timeline-versions" id="timelineVersoes">
+                    <!-- Cards serão inseridos aqui pelo JavaScript -->
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <!-- CORREÇÃO: Usar data-bs-dismiss -->
+                <!-- Botão Voltar - chama a função -->
+                <button type="button" class="btn btn-primary" onclick="voltarParaVisualizacao()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+
+                <!-- Botão Fechar - também chama a função em vez de data-bs-dismiss -->
+                <button type="button" class="btn btn-secondary" onclick="voltarParaVisualizacao()">
+                    <i class="bi bi-x-circle"></i> Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 2000;"></div>
+
+<script src="{{ url_for('static', filename='js/paginaJustificativas.js') }}"></script>
+
+
+{% endblock %}

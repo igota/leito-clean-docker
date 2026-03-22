@@ -1,0 +1,272 @@
+{
+    "127.0.0.1": {
+        "ultima_atualizacao": "2026-03-22 16:25:29",
+        "leitos": [
+            {
+                "prontuario": "355709",
+                "paciente": "LUIZA TOME DE SOUSA",
+                "setor": "AVC AGUDO",
+                "numero_leito": "01",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "0",
+                "dias_hospital": "0",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355239",
+                "paciente": "RAIMUNDO TEIXEIRA DE AZEVEDO",
+                "setor": "AVC AGUDO",
+                "numero_leito": "03",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "4",
+                "dias_hospital": "7",
+                "escala_braden": "11 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355316",
+                "paciente": "RAIMUNDO NONATO VIEIRA DE SOUSA",
+                "setor": "AVC AGUDO",
+                "numero_leito": "05",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "6",
+                "dias_hospital": "6",
+                "escala_braden": "11 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "354922",
+                "paciente": "MARIA RODRIGUES DE OLIVEIRA",
+                "setor": "AVC AGUDO",
+                "numero_leito": "06",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "3",
+                "dias_hospital": "12",
+                "escala_braden": "11 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355663",
+                "paciente": "LUIZ GONZAGA PAIVA DE FARIAS",
+                "setor": "AVC AGUDO",
+                "numero_leito": "07",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "0",
+                "dias_hospital": "1",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355734",
+                "paciente": "MARIA FERREIRA DE CARVALHO",
+                "setor": "AVC AGUDO",
+                "numero_leito": "08",
+                "setor_original": "AVC AGUDO",
+                "dias_leito": "0",
+                "dias_hospital": "0",
+                "escala_braden": "14 pontos - RISCO MODERADO (13-14)"
+            }
+        ]
+    },
+    "192.168.11.162": {
+        "ultima_atualizacao": "2026-03-22 16:25:37",
+        "leitos": [
+            {
+                "prontuario": "354208",
+                "paciente": "MARIA DAS DORES DA SILVA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "01",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "9",
+                "dias_hospital": "22",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "340582",
+                "paciente": "CLAUDAIR CUNHA FERNANDES",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "02",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "2",
+                "dias_hospital": "3",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "283671",
+                "paciente": "ABDIAS PEREIRA DO NASCIMENTO",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "03",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "9",
+                "dias_hospital": "36",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "26412",
+                "paciente": "FRANCISCA COSTA DA SILVA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "04",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "3",
+                "dias_hospital": "5",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "354170",
+                "paciente": "MARCELO TELES ROCHA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "05",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "7",
+                "dias_hospital": "23",
+                "escala_braden": "11 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "352039",
+                "paciente": "VICTOR COUTINHO SILVA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "06",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "7",
+                "dias_hospital": "54",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355220",
+                "paciente": "JOSE SIMAO DE OLIVEIRA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "07",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "2",
+                "dias_hospital": "2",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "354391",
+                "paciente": "MARIA DA CONCEICAO BARRETO",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "08",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "1",
+                "dias_hospital": "16",
+                "escala_braden": "14 pontos - RISCO MODERADO (13-14)"
+            },
+            {
+                "prontuario": "352778",
+                "paciente": "SEBASTIAO ALVES DE SOUSA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "09",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "0",
+                "dias_hospital": "40",
+                "escala_braden": "14 pontos - RISCO MODERADO (13-14)"
+            },
+            {
+                "prontuario": "355383",
+                "paciente": "RAIMUNDO NONATO DE SOUSA",
+                "setor": "UTI ADULTO III",
+                "numero_leito": "10",
+                "setor_original": "UTI ADULTO III",
+                "dias_leito": "4",
+                "dias_hospital": "4",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "251487",
+                "paciente": "VERA LUCIA FERREIRA",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "01",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "4",
+                "dias_hospital": "4",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "151104",
+                "paciente": "FRANCISCO MARCONDES PONTES PARENTE",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "02",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "1",
+                "dias_hospital": "2",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "62958",
+                "paciente": "VALDENIA SOUSA DOS SANTOS",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "03",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "0",
+                "dias_hospital": "9",
+                "escala_braden": "15 pontos - RISCO LEVE (15-18)"
+            },
+            {
+                "prontuario": "281879",
+                "paciente": "MARIA ZULEICA GAMA",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "04",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "6",
+                "dias_hospital": "19",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355366",
+                "paciente": "ANTONIO OLIVAR BARROS",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "05",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "4",
+                "dias_hospital": "4",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "354345",
+                "paciente": "ROSA MARIA RODRIGUES DUARTE",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "06",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "9",
+                "dias_hospital": "17",
+                "escala_braden": "11 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "251359",
+                "paciente": "RAIMUNDO FERREIRA DO NASCIMENTO",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "07",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "9",
+                "dias_hospital": "9",
+                "escala_braden": "12 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355477",
+                "paciente": "LIDIA DOS SANTOS CRUZ",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "08",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "1",
+                "dias_hospital": "3",
+                "escala_braden": "9 pontos - RISCO MUITO ELEVADO (<=9)"
+            },
+            {
+                "prontuario": "355681",
+                "paciente": "MARIA VIANA MELO RIPARDO",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "09",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "0",
+                "dias_hospital": "0",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            },
+            {
+                "prontuario": "355620",
+                "paciente": "IRACI DO CARMO JORGE",
+                "setor": "UTI ADULTO IV",
+                "numero_leito": "10",
+                "setor_original": "UTI ADULTO IV",
+                "dias_leito": "1",
+                "dias_hospital": "1",
+                "escala_braden": "10 pontos - RISCO ELEVADO (10-12)"
+            }
+        ]
+    }
+}
