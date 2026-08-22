@@ -1,0 +1,18 @@
+# Segredos / configuração local
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Dados persistidos localmente (fora dos volumes nomeados do Docker)
+nginx/logs/
+backups/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
