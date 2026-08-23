@@ -2,9 +2,10 @@
 from collections import Counter
 import html
 import os
+import re
 import time
 from typing import Dict, List
-from ..config.settings import SETORES_JSON, DATA_DIR, LOGIN_URL, BASE_URL, PAGINA_PRINCIPAL, PEP_URL, USERNAME, PASSWORD
+from ..config.settings import SETORES_JSON, DATA_DIR, LOGIN_URL, BASE_URL, PAGINA_PRINCIPAL, PEP_URL, USERNAME_VITAE, PASSWORD_VITAE
 from ..database.conexao import get_db_connection
 from bs4 import BeautifulSoup
 from flask import json
@@ -14,78 +15,71 @@ import logging
 
 def login_if_needed(username, password):
     """
-    Função para login e navegação até a página de prontuário (Principal)
-    Retorna um dicionário com success e nome_completo
+    Login via módulo Segurança do Vitae (mesmo sistema usado pelo Projeto
+    Vouchers: sistemasnti.isgh.org.br/seguranca/login.jsf). Mais rápido que
+    o fluxo antigo via pacientehrn: 2 requisições (GET + POST) em vez de 3,
+    ViewState extraído via regex em vez de BeautifulSoup, e o nome completo
+    lido direto do HTML de resposta do POST — sem GET extra de verificação.
+    Retorna um dicionário com success e nome_completo.
     """
-    
-   
-   
-    
+    LOGIN_URL_SEGURANCA = "https://sistemasnti.isgh.org.br/seguranca/login.jsf"
 
     session_http = requests.Session()
+    session_http.headers["User-Agent"] = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    )
 
     try:
         # =========================
         # 1️⃣ GET login.jsf (captura ViewState + cookie)
         # =========================
-        resp_get = session_http.get(LOGIN_URL, timeout=5)
+        resp_get = session_http.get(LOGIN_URL_SEGURANCA, timeout=5)
 
         if resp_get.status_code != 200:
-            logging.error("Falha ao acessar login.jsf")
+            logging.error("Falha ao acessar seguranca/login.jsf")
             return {"success": False}
 
-        soup = BeautifulSoup(resp_get.text, "html.parser")
-        viewstate_input = soup.find("input", {"name": "javax.faces.ViewState"})
+        viewstate = _extrair_viewstate_regex(resp_get.text)
 
-        if not viewstate_input:
+        if not viewstate:
             logging.error("ViewState não encontrado")
             return {"success": False}
-
-        viewstate = viewstate_input["value"]
 
         # =========================
         # 2️⃣ POST login
         # =========================
         payload = {
-            "formulario": "formulario",
-            "login": username,
-            "xyb-ac": password,
-            "formulario:botaoLogin": "confirmar",
-            "formulario:host": "10.2.2.8:8080",
-            "javax.faces.ViewState": viewstate
-        }
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "Mozilla/5.0"
+            "funcaoclickForm": "funcaoclickForm",
+            "funcaoclickForm:login": username.upper(),
+            "funcaoclickForm:funcaoclick": password.upper(),
+            "funcaoclickForm:logar": "Confirmar",
+            "javax.faces.ViewState": viewstate,
         }
 
         resp_post = session_http.post(
-            LOGIN_URL,
+            LOGIN_URL_SEGURANCA,
             data=payload,
-            headers=headers,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": LOGIN_URL_SEGURANCA,
+                "Origin": "https://sistemasnti.isgh.org.br",
+            },
             timeout=5,
             allow_redirects=True
         )
 
         # =========================
-        # 3️⃣ Teste REAL de autenticação
+        # 3️⃣ Teste REAL de autenticação (direto na resposta do POST,
+        # sem GET extra de verificação)
         # =========================
-        resp_check = session_http.get(
-            PAGINA_PRINCIPAL,
-            timeout=5,
-            allow_redirects=True
-        )
-
-        # Se foi redirecionado para login → falhou
-        if "login.jsf" in resp_check.url.lower():
+        if "iconmenuPrincipal" not in resp_post.text or "funcaoclickForm:login" in resp_post.text:
             return {"success": False}
 
         # =========================
         # 4️⃣ Capturar o nome completo do usuário
         # =========================
-        nome_completo = extrair_nome_usuario(resp_check.text)
-        
+        nome_completo = extrair_nome_usuario(resp_post.text)
+
         if nome_completo:
             logging.info(f"Nome completo capturado: {nome_completo}")
             return {
@@ -111,59 +105,32 @@ def login_if_needed(username, password):
         return {"success": False}
 
 
+def _extrair_viewstate_regex(html_content):
+    """Extrai o javax.faces.ViewState via regex (mais leve que BeautifulSoup)."""
+    m = (re.search(r'name="javax\.faces\.ViewState"\s+id="javax\.faces\.ViewState"\s+value="([^"]*)"', html_content)
+         or re.search(r'javax\.faces\.ViewState[^>]*value="([^"]*)"', html_content))
+    return m.group(1) if m else None
+
+
 def extrair_nome_usuario(html_content):
     """
-    Extrai o nome completo do usuário do HTML da página principal
-    XPath alvo: /html/body/div[2]/form/div[6]/div[1]/span
+    Extrai o nome completo do usuário do HTML pós-login.
+    XPath alvo: //*[@id="logout"]/span[1]
     """
     try:
         soup = BeautifulSoup(html_content, "html.parser")
-        
-        # =============================================
-        # ESTRATÉGIA 1: Seguir a estrutura exata do XPath
-        # =============================================
-        try:
-            # Encontra o body
-            body = soup.find("body")
-            if body:
-                # Encontra todos os divs filhos diretos do body
-                body_divs = body.find_all("div", recursive=False)
-                
-                # Pega o segundo div (índice 1, já que Python é 0-based)
-                if len(body_divs) >= 2:
-                    div_2 = body_divs[1]  # div[2] no XPath
-                    
-                    # Encontra o form dentro deste div
-                    form = div_2.find("form")
-                    if form:
-                        # Encontra todos os divs filhos diretos do form
-                        form_divs = form.find_all("div", recursive=False)
-                        
-                        # Pega o sexto div (índice 5)
-                        if len(form_divs) >= 6:
-                            div_6 = form_divs[5]  # div[6] no XPath
-                            
-                            # Encontra todos os divs filhos diretos do div_6
-                            div_6_divs = div_6.find_all("div", recursive=False)
-                            
-                            # Pega o primeiro div (índice 0)
-                            if len(div_6_divs) >= 1:
-                                div_1 = div_6_divs[0]  # div[1] no XPath
-                                
-                                # Encontra o span
-                                span_nome = div_1.find("span")
-                                if span_nome:
-                                    nome = span_nome.get_text(strip=True)
-                                    if nome and len(nome) > 3:
-                                        return nome
-        except Exception as e:
-            logging.debug(f"Estratégia 1 falhou: {e}")
-        
 
-        
-        # Se nenhuma estratégia funcionar
-        return None
-        
+        logout_el = soup.find(id="logout")
+        if not logout_el:
+            return None
+
+        span_nome = logout_el.find("span")
+        if not span_nome:
+            return None
+
+        nome = span_nome.get_text(strip=True)
+        return nome if nome and len(nome) > 3 else None
+
     except Exception as e:
         logging.error(f"Erro ao extrair nome do usuário: {e}")
         return None
@@ -212,8 +179,8 @@ def login_e_buscar_leitos(setores_desejados: List[str]) -> List[Dict]:
         # 1.3 Fazer login
         payload_login = {
             "formulario": "formulario",
-            "login": USERNAME,
-            "xyb-ac": PASSWORD,
+            "login": USERNAME_VITAE,
+            "xyb-ac": PASSWORD_VITAE,
             "formulario:botaoLogin": "confirmar",
             "formulario:host": "10.2.2.8:8080",
             "javax.faces.ViewState": viewstate
@@ -498,10 +465,17 @@ def _processar_resposta_setor_otimizada(resposta_texto: str, setor_nome: str) ->
                 
                 # Coluna IMPORTANTE: Clínica - Enf.Leito (índice 2)
                 texto_setor = celulas[2].get_text(strip=True)
-                
+
+                # ============================================================
+                # 🔥 NOVA REGRA: IGNORAR RPA GERAL e SPA GERAL
+                # ============================================================
+                if "RPA GERAL" in texto_setor or "SPA GERAL" in texto_setor:
+                    logging.info(f"🚫 Paciente IGNORADO (RPA/SPA GERAL): {paciente} - {texto_setor}")
+                    continue  # Pula este paciente completamente
+
                 # Processar setor e leito COM PARSER OTIMIZADO
                 setor, numero_leito = _parse_setor_leito_otimizado(texto_setor, setor_nome)
-                
+
                 # Validar dados mínimos
                 if not prontuario or not paciente:
                     continue
@@ -611,9 +585,16 @@ def _extrair_dados_da_tabela_soup_otimizada(soup, setor_nome: str) -> List[Dict]
                 prontuario = prontuario_elem.get_text(strip=True)
                 paciente = paciente_elem.get_text(strip=True)
                 texto_setor = setor_elem.get_text(strip=True)
-                
+
+                # ============================================================
+                # 🔥 NOVA REGRA: IGNORAR RPA GERAL e SPA GERAL
+                # ============================================================
+                if "RPA GERAL" in texto_setor or "SPA GERAL" in texto_setor:
+                    logging.info(f"🚫 Paciente IGNORADO (RPA/SPA GERAL): {paciente} - {texto_setor}")
+                    continue  # Pula este paciente completamente
+
                 setor, numero_leito = _parse_setor_leito_otimizado(texto_setor, setor_nome)
-                
+
                 if prontuario and paciente:
                     dados.append({
                         "prontuario": prontuario,
@@ -637,9 +618,16 @@ def _extrair_dados_da_tabela_soup_otimizada(soup, setor_nome: str) -> List[Dict]
                         prontuario = celulas[0].get_text(strip=True)
                         paciente = celulas[1].get_text(strip=True)
                         texto_setor = celulas[2].get_text(strip=True)
-                        
+
+                        # ============================================================
+                        # 🔥 NOVA REGRA: IGNORAR RPA GERAL e SPA GERAL
+                        # ============================================================
+                        if "RPA GERAL" in texto_setor or "SPA GERAL" in texto_setor:
+                            logging.info(f"🚫 Paciente IGNORADO (RPA/SPA GERAL): {paciente} - {texto_setor}")
+                            continue  # Pula este paciente completamente
+
                         setor, numero_leito = _parse_setor_leito_otimizado(texto_setor, setor_nome)
-                        
+
                         if prontuario and paciente:
                             dados.append({
                                 "prontuario": prontuario,
@@ -706,8 +694,8 @@ def obter_lista_todos_setores() -> list[str]:
 
         payload_login = {
             "formulario": "formulario",
-            "login": USERNAME,
-            "xyb-ac": PASSWORD,
+            "login": USERNAME_VITAE,
+            "xyb-ac": PASSWORD_VITAE,
             "formulario:botaoLogin": "confirmar",
             "formulario:host": "10.2.2.8:8080",
             "javax.faces.ViewState": viewstate

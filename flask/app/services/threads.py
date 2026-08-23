@@ -4,8 +4,9 @@ import time as time_module  # Renomeia o import para evitar conflitos
 from flask import json
 import logging
 from ..services.integracao_vitae import buscar_ips_e_setores_ativos, login_e_buscar_leitos
-from ..config.settings import LEITOS_CACHE_FILE, INTERVALO_ATUALIZACAO
 from ..services.atualiza_pendentes import atualiza_pendentes
+from ..config.settings import LEITOS_CACHE_FILE, INTERVALO_ATUALIZACAO
+
 
 def thread_atualizar_leitos_por_ip():
     while True:
@@ -50,7 +51,7 @@ def thread_atualizar_leitos_por_ip():
 def iniciar_threads():
     threads = [
         threading.Thread(target=thread_atualizar_leitos_por_ip, daemon=True),
-        #threading.Thread(target=atualiza_pendentes, daemon=True)
+        threading.Thread(target=atualiza_pendentes, daemon=True)
     ]
     
     for thread in threads:

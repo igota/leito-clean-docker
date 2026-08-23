@@ -58,6 +58,20 @@ body.pagina-com-scroll .container-secundario {
 
 
 /* =========================
+   MENU OCULTO (modo maximizado)
+========================= */
+body.menu-oculto .menu {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+body.menu-oculto .container-primario {
+    margin-left: 0;
+}
+
+/* =========================
    CONTAINER PRIMÁRIO (FUNDO)
 ========================= */
 .container-primario {

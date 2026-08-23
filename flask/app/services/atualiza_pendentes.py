@@ -47,14 +47,20 @@ def atualiza_pendentes():
                 if pendentes_gerados > 0:
                     print(f"\n{'='*60}")
                     print(f"🔔 {pendentes_gerados} leito(s) viraram PENDENTE")
-                    
-                    # Busca os detalhes para notificação
+
+                    # 🔒 Reserva atômica dos leitos a notificar: SELECT ... FOR UPDATE
+                    # dentro de uma transação explícita garante que, se mais de um
+                    # processo rodar esse polling ao mesmo tempo (ex.: múltiplos
+                    # workers do gunicorn), cada leito pendente só seja reservado
+                    # por um processo só — evita e-mail duplicado pra equipe.
+                    conn.begin()
+
                     cursor.execute("""
-                        SELECT 
-                            rl.id, 
-                            rl.numero_leito, 
+                        SELECT
+                            rl.id,
+                            rl.numero_leito,
                             rl.setor as setor_nome,
-                            rl.data_validacao, 
+                            rl.data_validacao,
                             rl.vencimento,
                             s.id as setor_id
                         FROM registro_limpeza rl
@@ -62,15 +68,26 @@ def atualiza_pendentes():
                         WHERE rl.status = 'PENDENTE'
                           AND rl.email_enviado = 0
                         ORDER BY rl.setor, rl.numero_leito, rl.id
+                        FOR UPDATE
                     """)
-                    
+
                     leitos_vencidos = cursor.fetchall()
-                    
+
+                    if leitos_vencidos:
+                        ids_reservados = [l['id'] for l in leitos_vencidos]
+                        placeholders = ','.join(['%s'] * len(ids_reservados))
+                        cursor.execute(
+                            f"UPDATE registro_limpeza SET email_enviado = 1 WHERE id IN ({placeholders})",
+                            ids_reservados
+                        )
+
+                    conn.commit()
+
                     for leito in leitos_vencidos:
                         print(f"\n   Leito: {leito['numero_leito']} - Setor: {leito['setor_nome']}")
                         print(f"   Última limpeza: {leito['data_validacao']}")
                         print(f"   Vencimento: {leito['vencimento']}")
-                    
+
                     if leitos_vencidos:
                         enviar_notificacoes_lote(leitos_vencidos)
 

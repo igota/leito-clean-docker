@@ -1,3 +1,105 @@
+// ================================
+// PAGINAÇÃO GENÉRICA (Dispositivos / Setores / Usuários)
+// ================================
+function criarPaginador({ infoId, controlsId, itemsPerPageId, tbodySelector, renderTbody }) {
+    const estado = { dados: [], paginaAtual: 1, itensPorPagina: 10 };
+
+    const elItemsPerPage = document.getElementById(itemsPerPageId);
+    if (elItemsPerPage) {
+        estado.itensPorPagina = parseInt(elItemsPerPage.value);
+        elItemsPerPage.addEventListener('change', () => {
+            estado.itensPorPagina = parseInt(elItemsPerPage.value);
+            estado.paginaAtual = 1;
+            renderizar();
+        });
+    }
+
+    function aplicarPaginacao() {
+        const inicio = (estado.paginaAtual - 1) * estado.itensPorPagina;
+        return estado.dados.slice(inicio, inicio + estado.itensPorPagina);
+    }
+
+    function criarBotao(label, onClick, opts = {}) {
+        const btn = document.createElement('button');
+        btn.className = `btn-pagination ${opts.active ? 'active' : ''}`;
+        btn.innerHTML = label;
+        btn.disabled = !!opts.disabled;
+        btn.onclick = onClick;
+        return btn;
+    }
+
+    function criarEllipsis() {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.style.padding = '0 5px';
+        span.style.color = '#013757';
+        span.style.fontWeight = 'bold';
+        return span;
+    }
+
+    function irParaPagina(pagina) {
+        estado.paginaAtual = pagina;
+        renderizar();
+    }
+
+    function atualizarControles() {
+        const elInfo = document.getElementById(infoId);
+        const elControls = document.getElementById(controlsId);
+        const totalItens = estado.dados.length;
+        const totalPaginas = Math.ceil(totalItens / estado.itensPorPagina);
+
+        if (estado.paginaAtual > totalPaginas) {
+            estado.paginaAtual = Math.max(1, totalPaginas);
+        }
+
+        if (elInfo) {
+            const inicio = totalItens === 0 ? 0 : (estado.paginaAtual - 1) * estado.itensPorPagina + 1;
+            const fim = Math.min(estado.paginaAtual * estado.itensPorPagina, totalItens);
+            elInfo.innerHTML = `<i class="bi bi-layout-three-columns"></i> ${inicio} - ${fim} de ${totalItens} resultados`;
+        }
+
+        if (!elControls) return;
+        elControls.innerHTML = '';
+        if (totalPaginas <= 1) return;
+
+        elControls.appendChild(criarBotao('<i class="bi bi-chevron-left"></i>', () => irParaPagina(estado.paginaAtual - 1), { disabled: estado.paginaAtual === 1 }));
+
+        let inicioPaginas = Math.max(1, estado.paginaAtual - 2);
+        let fimPaginas = Math.min(totalPaginas, inicioPaginas + 4);
+        if (fimPaginas - inicioPaginas < 4) inicioPaginas = Math.max(1, fimPaginas - 4);
+
+        if (inicioPaginas > 1) {
+            elControls.appendChild(criarBotao('1', () => irParaPagina(1)));
+            if (inicioPaginas > 2) elControls.appendChild(criarEllipsis());
+        }
+
+        for (let i = inicioPaginas; i <= fimPaginas; i++) {
+            elControls.appendChild(criarBotao(String(i), () => irParaPagina(i), { active: i === estado.paginaAtual }));
+        }
+
+        if (fimPaginas < totalPaginas) {
+            if (fimPaginas < totalPaginas - 1) elControls.appendChild(criarEllipsis());
+            elControls.appendChild(criarBotao(String(totalPaginas), () => irParaPagina(totalPaginas)));
+        }
+
+        elControls.appendChild(criarBotao('<i class="bi bi-chevron-right"></i>', () => irParaPagina(estado.paginaAtual + 1), { disabled: estado.paginaAtual === totalPaginas }));
+    }
+
+    function renderizar() {
+        const tbody = document.querySelector(tbodySelector);
+        if (tbody) renderTbody(tbody, aplicarPaginacao());
+        atualizarControles();
+    }
+
+    return {
+        setDados(dados) {
+            estado.dados = dados || [];
+            estado.paginaAtual = 1;
+            renderizar();
+        }
+    };
+}
+
 // Função para carregar setores de dispositivos a partir do JSON local
 async function carregarSetoresDispositivoDoJson(selectElement) {
     if (!selectElement) return;
@@ -277,123 +379,210 @@ function configurarEventosEdicaoUsuarios() {
 }
 
 // ================================
-// FUNÇÕES DE CARREGAMENTO DE DADOS (CORRIGIDA)
+// PAGINADORES DE CADA TABELA
+// ================================
+const paginadorUsuarios = criarPaginador({
+    infoId: 'usuariosPaginationInfo',
+    controlsId: 'usuariosPaginationControls',
+    itemsPerPageId: 'usuariosItemsPerPage',
+    tbodySelector: '#tabelaUsuarios tbody',
+    renderTbody(tbody, itens) {
+        tbody.innerHTML = '';
+
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">Nenhum usuário cadastrado.</td></tr>';
+            return;
+        }
+
+        itens.forEach(u => {
+            // Formatar setores para exibição
+            let setoresDisplay = '';
+            let setoresIds = '';
+
+            if (u.setores_notificacao && u.setores_notificacao.length > 0) {
+                // 🔴 SIMPLES: Se tem mais de 3 setores, mostra "Todos"
+                if (u.setores_notificacao.length >= 3) {
+                    setoresDisplay = '<span class="badge bg-info text-dark">Todos</span>';
+                } else {
+                    // Mostrar badges individuais
+                    setoresDisplay = u.setores_notificacao.map(s =>
+                        `<span class="badge bg-primary text-white me-1">${s.nome}</span>`
+                    ).join('');
+                }
+                setoresIds = u.setores_notificacao.map(s => s.id).join(',');
+            } else {
+                setoresDisplay = '<span class="text-muted">Nenhum</span>';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${u.login}</td>
+                <td>${u.nome}</td>
+                <td>${u.email || '-'}</td>
+                <td>
+                    ${u.tipo === 'ADMIN'
+                        ? '<span class="badge bg-danger">Administrador</span>'
+                        : '<span class="badge bg-primary">Gerente</span>'}
+                </td>
+                <td class="text-center">
+                    ${u.notificacoes
+                        ? '<span class="badge bg-success">Sim</span>'
+                        : '<span class="badge bg-secondary">Não</span>'}
+                </td>
+                <td>
+                    ${setoresDisplay}
+                </td>
+                <td>${u.ultimo_acesso || '<span class="text-muted">Nunca acessou</span>'}</td>
+                <td>
+                    ${u.status == 1
+                        ? '<span class="badge bg-success">Ativo</span>'
+                        : '<span class="badge bg-danger">Inativo</span>'}
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary btn-editar-usuario"
+                        data-id="${u.id}"
+                        data-login="${u.login}"
+                        data-nome="${u.nome}"
+                        data-email="${u.email || ''}"
+                        data-tipo="${u.tipo}"
+                        data-notificacoes="${u.notificacoes}"
+                        data-setores="${setoresIds}"
+                        data-status="${u.status}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        configurarEventosEdicaoUsuarios();
+    }
+});
+
+const paginadorDispositivos = criarPaginador({
+    infoId: 'dispositivosPaginationInfo',
+    controlsId: 'dispositivosPaginationControls',
+    itemsPerPageId: 'dispositivosItemsPerPage',
+    tbodySelector: '#tabelaDispositivos tbody',
+    renderTbody(tbody, itens) {
+        tbody.innerHTML = '';
+
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nenhum dispositivo cadastrado.</td></tr>';
+            return;
+        }
+
+        itens.forEach(d => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.nome}</td>
+                <td>${d.ip}</td>
+                <td>
+                    ${d.status == 1
+                        ? '<span class="badge bg-success">Ativo</span>'
+                        : '<span class="badge bg-danger">Inativo</span>'}
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary btn-editar"
+                        data-id="${d.id}"
+                        data-nome="${d.nome}"
+                        data-ip="${d.ip}"
+                        data-status="${d.status}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 🔴 SÓ configura eventos de dispositivos
+        configurarEventosEdicaoDispositivos();
+    }
+});
+
+const paginadorSetores = criarPaginador({
+    infoId: 'setoresPaginationInfo',
+    controlsId: 'setoresPaginationControls',
+    itemsPerPageId: 'setoresItemsPerPage',
+    tbodySelector: '#tabelaSetores tbody',
+    renderTbody(tbody, itens) {
+        tbody.innerHTML = '';
+
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Nenhum setor cadastrado.</td></tr>';
+            return;
+        }
+
+        itens.forEach(s => {
+            const tr = document.createElement('tr');
+
+            // 🔴 Formatar dispositivo como "nome - ip"
+            let dispositivoText = '';
+            if (s.id_dispositivo && s.dispositivo_ip && s.dispositivo_nome) {
+                dispositivoText = `${s.dispositivo_nome} - ${s.dispositivo_ip}`;
+            } else if (s.id_dispositivo && s.dispositivo_ip) {
+                dispositivoText = s.dispositivo_ip; // fallback se tiver só IP
+            } else if (s.id_dispositivo && s.dispositivo_nome) {
+                dispositivoText = s.dispositivo_nome; // fallback se tiver só nome
+            } else if (s.id_dispositivo && !s.dispositivo_ip) {
+                dispositivoText = '<span class="text-warning">Dispositivo sem IP</span>';
+            } else {
+                dispositivoText = '<span class="text-muted">Não vinculado</span>';
+            }
+
+            tr.innerHTML = `
+                <td>${s.nome}</td>
+                <td>${s.qtd_leitos}</td>
+                <td>${dispositivoText}</td>
+                <td>
+                    ${s.status == 1
+                        ? '<span class="badge bg-success">Ativo</span>'
+                        : '<span class="badge bg-danger">Inativo</span>'}
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary btn-editar-setor"
+                        data-id="${s.id}"
+                        data-nome="${s.nome}"
+                        data-leitos="${s.qtd_leitos}"
+                        data-dispositivo="${s.id_dispositivo || ''}"
+                        data-dispositivo-ip="${s.dispositivo_ip || ''}"
+                        data-dispositivo-nome="${s.dispositivo_nome || ''}"
+                        data-status="${s.status}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Configura eventos de setores
+        configurarEventosEdicaoSetores();
+    }
+});
+
+// ================================
+// FUNÇÕES DE CARREGAMENTO DE DADOS
+// ================================
 async function carregarUsuarios() {
     try {
         const response = await fetch('/api/usuarios');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+
         const usuarios = await response.json();
-        const tbody = document.querySelector('#tabelaUsuarios tbody');
-        
-        if (tbody) {
-            tbody.innerHTML = '';
-            usuarios.forEach(u => {
-                // Formatar setores para exibição
-                let setoresDisplay = '';
-                let setoresIds = '';
-                
-                if (u.setores_notificacao && u.setores_notificacao.length > 0) {
-                    // 🔴 SIMPLES: Se tem mais de 3 setores, mostra "Todos"
-                    if (u.setores_notificacao.length >= 3) {
-                        setoresDisplay = '<span class="badge bg-info text-dark">Todos</span>';
-                    } else {
-                        // Mostrar badges individuais
-                        setoresDisplay = u.setores_notificacao.map(s => 
-                            `<span class="badge bg-primary text-white me-1">${s.nome}</span>`
-                        ).join('');
-                    }
-                    setoresIds = u.setores_notificacao.map(s => s.id).join(',');
-                } else {
-                    setoresDisplay = '<span class="text-muted">Nenhum</span>';
-                }
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${u.login}</td>
-                    <td>${u.nome}</td>
-                    <td>${u.email || '-'}</td>
-                    <td>
-                        ${u.tipo === 'ADMIN' 
-                            ? '<span class="badge bg-danger">Administrador</span>'
-                            : '<span class="badge bg-primary">Gerente</span>'}
-                    </td>
-                    <td class="text-center">
-                        ${u.notificacoes
-                            ? '<span class="badge bg-success">Sim</span>'
-                            : '<span class="badge bg-secondary">Não</span>'}
-                    </td>
-                    <td>
-                        ${setoresDisplay}
-                    </td>
-                    <td>${u.ultimo_acesso || '<span class="text-muted">Nunca acessou</span>'}</td>
-                    <td>
-                        ${u.status == 1 
-                            ? '<span class="badge bg-success">Ativo</span>'
-                            : '<span class="badge bg-danger">Inativo</span>'}
-                    </td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary btn-editar-usuario"
-                            data-id="${u.id}"
-                            data-login="${u.login}"
-                            data-nome="${u.nome}"
-                            data-email="${u.email || ''}"
-                            data-tipo="${u.tipo}"
-                            data-notificacoes="${u.notificacoes}"
-                            data-setores="${setoresIds}"
-                            data-status="${u.status}">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            configurarEventosEdicaoUsuarios();
-        }
+        paginadorUsuarios.setDados(usuarios);
     } catch (error) {
         console.error('Erro ao carregar usuários:', error);
         mostrarToast('Erro ao carregar usuários', 'danger');
     }
 }
 
-// Agora atualizar as funções de carregamento
 async function carregarDispositivos() {
     try {
         const response = await fetch('/api/dispositivos');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+
         const dispositivos = await response.json();
-        const tbody = document.querySelector('#tabelaDispositivos tbody');
-        
-        if (tbody) {
-            tbody.innerHTML = '';
-            dispositivos.forEach(d => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${d.nome}</td>
-                    <td>${d.ip}</td>
-                    <td>
-                        ${d.status == 1 
-                            ? '<span class="badge bg-success">Ativo</span>'
-                            : '<span class="badge bg-danger">Inativo</span>'}
-                    </td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary btn-editar"
-                            data-id="${d.id}"
-                            data-nome="${d.nome}"
-                            data-ip="${d.ip}"
-                            data-status="${d.status}">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            // 🔴 SÓ configura eventos de dispositivos
-            configurarEventosEdicaoDispositivos();
-        }
+        paginadorDispositivos.setDados(dispositivos);
     } catch (error) {
         console.error('Erro ao carregar dispositivos:', error);
         mostrarToast('Erro ao carregar dispositivos', 'danger');
@@ -404,57 +593,9 @@ async function carregarSetores() {
     try {
         const response = await fetch('/api/setores_completos');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+
         const setores = await response.json();
-        const tbody = document.querySelector('#setores tbody');
-        
-        if (tbody) {
-            tbody.innerHTML = '';
-            setores.forEach(s => {
-                const tr = document.createElement('tr');
-                
-                // 🔴 Formatar dispositivo como "nome - ip"
-                let dispositivoText = '';
-                if (s.id_dispositivo && s.dispositivo_ip && s.dispositivo_nome) {
-                    dispositivoText = `${s.dispositivo_nome} - ${s.dispositivo_ip}`;
-                } else if (s.id_dispositivo && s.dispositivo_ip) {
-                    dispositivoText = s.dispositivo_ip; // fallback se tiver só IP
-                } else if (s.id_dispositivo && s.dispositivo_nome) {
-                    dispositivoText = s.dispositivo_nome; // fallback se tiver só nome
-                } else if (s.id_dispositivo && !s.dispositivo_ip) {
-                    dispositivoText = '<span class="text-warning">Dispositivo sem IP</span>';
-                } else {
-                    dispositivoText = '<span class="text-muted">Não vinculado</span>';
-                }
-                
-                tr.innerHTML = `
-                    <td>${s.nome}</td>
-                    <td>${s.qtd_leitos}</td>
-                    <td>${dispositivoText}</td>
-                    <td>
-                        ${s.status == 1 
-                            ? '<span class="badge bg-success">Ativo</span>'
-                            : '<span class="badge bg-danger">Inativo</span>'}
-                    </td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary btn-editar-setor"
-                            data-id="${s.id}"
-                            data-nome="${s.nome}"
-                            data-leitos="${s.qtd_leitos}"
-                            data-dispositivo="${s.id_dispositivo || ''}"
-                            data-dispositivo-ip="${s.dispositivo_ip || ''}"
-                            data-dispositivo-nome="${s.dispositivo_nome || ''}"  
-                            data-status="${s.status}">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            // Configura eventos de setores
-            configurarEventosEdicaoSetores();
-        }
+        paginadorSetores.setDados(setores);
     } catch (error) {
         console.error('Erro ao carregar setores:', error);
         mostrarToast('Erro ao carregar setores', 'danger');

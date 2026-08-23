@@ -257,12 +257,14 @@ def exportar_pdf(dados):
 
 
     for (setor_nome, leito_nome), registros in sorted(grupos.items()):
-        bloco = []
-
         if modo == "setor_leito":
-            bloco.append(Paragraph(f"Setor: {setor_nome} | Leito: {leito_nome}", estilos["SubtituloBorda"]))
+            subtitulo = Paragraph(f"Setor: {setor_nome} | Leito: {leito_nome}", estilos["SubtituloBorda"])
         elif modo == "leito":
-            bloco.append(Paragraph(f"Leito: {leito_nome}", estilos["SubtituloBorda"]))
+            subtitulo = Paragraph(f"Leito: {leito_nome}", estilos["SubtituloBorda"])
+        else:
+            subtitulo = Paragraph(f"Setor: {setor_nome}", estilos["SubtituloBorda"])
+
+        elementos.append(subtitulo)
 
         dados_tabela = [["Paciente", "Tipo", "Inicio", "Fim", "Validação","ASG", "Enfermeiro(a)", "Tempo", "Status"]]
         for r in registros:
@@ -278,7 +280,7 @@ def exportar_pdf(dados):
                 Paragraph(formatar_status_pdf(r["status"]), estilos["Normal"])
             ])
 
-        tabela = Table(dados_tabela, colWidths=col_conteudo)
+        tabela = Table(dados_tabela, colWidths=col_conteudo, repeatRows=1)
         tabela.setStyle(TableStyle([
             # Cabeçalho
             ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#003a5d")),
@@ -303,10 +305,8 @@ def exportar_pdf(dados):
             ("BOTTOMPADDING", (0,0), (-1,-1), 4),
         ]))
 
-        bloco.append(tabela)
-        bloco.append(Spacer(1, 8))  # espaço entre grupos reduzido
-
-        elementos.append(KeepTogether(bloco))
+        elementos.append(tabela)
+        elementos.append(Spacer(1, 8))  # espaço entre grupos reduzido
 
     # ===============================
     # BUILD

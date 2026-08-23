@@ -4,7 +4,7 @@
     /* =========================
        ESTADO
     ========================= */
-    
+
     let segundos = 0;
     let limpezasAtivas = [];
     let limpezaSelecionada = null;
@@ -33,7 +33,16 @@
         popupLeitorEnfermeiro: document.getElementById("popupLeitorEnfermeiro"),
         inputCartaoEnfermeiroOculto: document.getElementById("idcartaoEnfermeiroOculto"),
         fecharLeitorEnfermeiro: document.getElementById("fecharLeitorEnfermeiro"),
+        popupLeitorASGFinalizar: document.getElementById("popupLeitorASGFinalizar"),
+        inputCartaoASGFinalizarOculto: document.getElementById("idcartaoASGFinalizarOculto"),
+        fecharLeitorASGFinalizar: document.getElementById("fecharLeitorASGFinalizar"),
+        popupLeitorIntervalo: document.getElementById("popupLeitorIntervalo"),
+        inputCartaoIntervaloOculto: document.getElementById("idcartaoIntervaloOculto"),
+        fecharLeitorIntervalo: document.getElementById("fecharLeitorIntervalo"),
+        btnIntervaloAlmocoJanta: document.getElementById("btnIntervaloAlmocoJanta"),
     };
+
+    let idLimpezaParaFinalizar = null;
 
     /* =========================
        INIT
@@ -66,21 +75,35 @@
     /* =========================
     FUNÇÃO PARA MOSTRAR MENSAGEM COM FOCO NO INPUT
     ========================= */
-    function mostrarMensagem(texto, callback = null) {
+    function mostrarMensagem(texto, callback = null, opts = {}) {
         const popup = document.getElementById("popupMensagem");
         const msg = document.getElementById("mensagemTexto");
         const btn = document.getElementById("fecharMensagemBtn");
+        const btnIntervalo = DOM.btnIntervaloAlmocoJanta;
 
         // Usa innerHTML para permitir quebras de linha
         msg.innerHTML = texto.replace(/\n/g, '<br>');
-        
+
         // Centraliza o texto e aumenta a fonte
         msg.style.textAlign = 'center';
         msg.style.fontSize = '2.2rem';
         msg.style.lineHeight = '1.5';
         msg.style.padding = '20px';
         msg.style.whiteSpace = 'pre-line';
-        
+
+        // Botão de Intervalo Almoço/Janta só aparece quando explicitamente solicitado
+        // (bloqueio por tempo mínimo), para permitir liberar a finalização a outro ASG
+        if (opts.idLimpeza && btnIntervalo) {
+            btnIntervalo.classList.remove("oculto");
+            btnIntervalo.onclick = () => {
+                popup.classList.add("oculto");
+                abrirPopupLeitorIntervalo(opts.idLimpeza);
+            };
+        } else if (btnIntervalo) {
+            btnIntervalo.classList.add("oculto");
+            btnIntervalo.onclick = null;
+        }
+
         popup.classList.remove("oculto");
 
         btn.onclick = () => {
@@ -91,12 +114,12 @@
             msg.style.lineHeight = '';
             msg.style.padding = '';
             msg.style.whiteSpace = '';
-            
+
             setTimeout(() => {
                 DOM.inputCartaoFinalizar?.focus();
                 DOM.inputCartaoFinalizar?.select();
             }, 50);
-            
+
             if (callback) callback();
         };
     }
@@ -110,14 +133,14 @@
         DOM.confirmarBtn.replaceWith(novoConfirmar);
         DOM.confirmarBtn = novoConfirmar;
 
-        
+
 
         // Adiciona novos listeners
         DOM.fecharConfirmacao?.addEventListener("click", () => ocultar(DOM.popupConfirmacao));
 
-        
-        
-        
+
+
+
         // Adiciona listener ao botão confirmar (com delegação para evitar problemas)
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'confirmarFim') {
@@ -151,9 +174,9 @@
             const mensagemHTML = DOM.mensagemConfirmacao.innerHTML;
             const enfMatch = mensagemHTML.match(/<span[^>]*>([^<]+)<\/span>/g);
             const enfNome = enfMatch ? enfMatch[0].replace(/<\/?span[^>]*>/g, '') : "Enfermeiro";
-            
+
             // Busca ID do cartão do localStorage ou usa valor do input
-            const idCartaoEnf = localStorage.getItem('ultimoCartaoEnf') || 
+            const idCartaoEnf = localStorage.getItem('ultimoCartaoEnf') ||
                                    DOM.inputCartaoFinalizar?.value || "";
 
             console.log("🔍 Finalizando limpeza:", {
@@ -171,18 +194,18 @@
 
             removerLimpezaDaTela(limpezaSelecionada.id);
             mostrarConclusao(enfNome, tempoTotalSeconds, limpezaSelecionada.id);
-            
+
             // Reseta o estado
             limpezaSelecionada = null;
 
         } catch (e) {
             console.error("❌ Erro ao finalizar limpeza:", e);
             alert(`Erro ao finalizar limpeza: ${e.message}`);
-            
+
             // Reativa o botão em caso de erro
             DOM.confirmarBtn.disabled = false;
             DOM.confirmarBtn.textContent = "Confirmar";
-            
+
             // Reabre o popup de confirmação
             mostrar(DOM.popupConfirmacao);
         }
@@ -307,7 +330,7 @@
             const popupConfirmacao = document.getElementById('popupConfirmacaoFinalizar');
             const confirmacaoTempo = document.getElementById('confirmacaoTempo');
             const confirmacaoMensagem = document.getElementById('confirmacaoMensagem');
-            
+
             // 🔒 Esconde o botão de nova limpeza
             if (btnNovaLimpeza) {
                 btnNovaLimpeza.classList.add('oculto');
@@ -326,7 +349,7 @@
             const novoCancelar = cancelarBtn.cloneNode(true);
             const novoConfirmar = confirmarBtn.cloneNode(true);
             const novoFechar = fecharBtn.cloneNode(true);
-            
+
             cancelarBtn.parentNode.replaceChild(novoCancelar, cancelarBtn);
             confirmarBtn.parentNode.replaceChild(novoConfirmar, confirmarBtn);
             fecharBtn.parentNode.replaceChild(novoFechar, fecharBtn);
@@ -338,13 +361,13 @@
             const fechar = (resultado) => {
                 if (resolvido) return;
                 resolvido = true;
-                
+
                 popupConfirmacao.classList.add('oculto');
-                
+
                 if (btnNovaLimpeza) {
                     btnNovaLimpeza.classList.remove('oculto');
                 }
-                
+
                 document.removeEventListener('keydown', onEsc);
                 resolve(resultado);
             };
@@ -355,19 +378,19 @@
                 e.stopPropagation();
                 fechar(false);
             };
-            
+
             const onConfirmar = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 fechar(true);
             };
-            
+
             const onFechar = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 fechar(false);
             };
-            
+
             const onEsc = (e) => {
                 if (e.key === 'Escape') {
                     e.preventDefault();
@@ -386,7 +409,7 @@
             novoCancelar.addEventListener('click', onCancelar);
             novoConfirmar.addEventListener('click', onConfirmar);
             novoFechar.addEventListener('click', onFechar);
-            
+
             // Listeners adicionais
             popupConfirmacao.addEventListener('click', onClickFora);
             document.addEventListener('keydown', onEsc);
@@ -615,7 +638,7 @@
                     opacity: 0.6;
                     cursor: not-allowed;
                 }
-                
+
                 /* Estilos para o popup de confirmação de tempo */
                 .popup-confirmacao-tempo {
                     position: fixed;
@@ -730,6 +753,8 @@
 
                 <div class="tempo" id="tempo-${l.id}">00:00</div>
 
+                ${l.intervalo_liberado ? '<div class="badge-intervalo">🍽️ Intervalo liberado</div>' : ''}
+
                 <div class="acoes"></div>
             `;
 
@@ -756,7 +781,7 @@
         container.onclick = (e) => {
             if (e.target.classList.contains("btn-finalizar")) {
                 const id = e.target.dataset.id;
-                colocarEmAguardandoValidacao(id); // 💾 backend + UI
+                abrirPopupLeitorASGFinalizar(id); // 🪪 pede o cartão do ASG antes de finalizar
             }
 
             if (e.target.classList.contains("btn-validar")) {
@@ -766,7 +791,90 @@
         };
     }
 
-    async function colocarEmAguardandoValidacao(idLimpeza) {
+    /* =========================
+       LEITOR DE CARTÃO DO ASG (FINALIZAR)
+    ========================= */
+    function abrirPopupLeitorASGFinalizar(idLimpeza) {
+        const limpeza = limpezasAtivas.find(l => l.id == idLimpeza);
+        if (!limpeza) {
+            console.warn("⚠ Limpeza não encontrada:", idLimpeza);
+            return;
+        }
+
+        idLimpezaParaFinalizar = idLimpeza;
+
+        ocultarPaginaPrincipal();
+        mostrar(DOM.popupLeitorASGFinalizar);
+        DOM.inputCartaoASGFinalizarOculto.value = "";
+        DOM.inputCartaoASGFinalizarOculto.focus();
+    }
+
+    DOM.fecharLeitorASGFinalizar?.addEventListener("click", () => {
+        ocultar(DOM.popupLeitorASGFinalizar);
+        DOM.inputCartaoASGFinalizarOculto.value = "";
+        idLimpezaParaFinalizar = null;
+        mostrarPaginaPrincipal();
+    });
+
+    let timerLeitorASGFinalizar = null;
+    let validandoASGFinalizar = false;
+
+    DOM.inputCartaoASGFinalizarOculto?.addEventListener("input", () => {
+        if (validandoASGFinalizar) return;
+
+        let valor = DOM.inputCartaoASGFinalizarOculto.value.replace(/\D/g, "");
+        if (valor.length > 1 && valor.startsWith("0")) {
+            valor = valor.substring(1);
+        }
+        DOM.inputCartaoASGFinalizarOculto.value = valor;
+
+        clearTimeout(timerLeitorASGFinalizar);
+        timerLeitorASGFinalizar = setTimeout(() => {
+            if (valor.length < 9 || valor.length > 10) return;
+            validarCartaoASGFinalizar(valor);
+        }, 120);
+    });
+
+    async function validarCartaoASGFinalizar(idCartao) {
+        validandoASGFinalizar = true;
+
+        try {
+            const resp = await fetch("/api/verificar_funcionarios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id_cartao: idCartao, tipo: "asg" })
+            });
+
+            validarJSON(resp);
+            const dados = await resp.json();
+
+            if (!dados.sucesso) {
+                mostrarMensagem("Funcionário não encontrado ou inativo.", () => {
+                    DOM.inputCartaoASGFinalizarOculto.value = "";
+                    DOM.inputCartaoASGFinalizarOculto.focus();
+                });
+                return;
+            }
+
+            const idLimpeza = idLimpezaParaFinalizar;
+
+            ocultar(DOM.popupLeitorASGFinalizar);
+            DOM.inputCartaoASGFinalizarOculto.value = "";
+
+            await colocarEmAguardandoValidacao(idLimpeza, idCartao);
+
+        } catch (erro) {
+            console.error("❌ Erro ao verificar ASG:", erro);
+            mostrarMensagem("Erro ao verificar funcionário.", () => {
+                DOM.inputCartaoASGFinalizarOculto.value = "";
+                DOM.inputCartaoASGFinalizarOculto.focus();
+            });
+        } finally {
+            validandoASGFinalizar = false;
+        }
+    }
+
+    async function colocarEmAguardandoValidacao(idLimpeza, idCartaoAsg) {
         try {
             const limpeza = limpezasAtivas.find(l => l.id == idLimpeza);
             if (!limpeza) return;
@@ -777,74 +885,179 @@
 
             console.log(`Tempo decorrido: ${tempoDecorridoMinutos} minutos`);
 
-            const TEMPO_MINIMO = 1; // 35 minutos
+            // Centro Cirúrgico tem tempo mínimo reduzido (15 min); demais setores, 35 min
+            const setorNorm = (limpeza.setor || "").trim().toUpperCase();
+            const ehCentroCirurgico = setorNorm.includes("CENTRO CIRURGICO") || setorNorm.includes("CENTRO CIRÚRGICO");
+            const TEMPO_MINIMO = ehCentroCirurgico ? 15 : 35;
 
             // Se for menor que o tempo mínimo, BLOQUEIA
             if (tempoDecorridoMinutos < TEMPO_MINIMO) {
-                const minutosFaltantes = TEMPO_MINIMO - tempoDecorridoMinutos;
-                
-                // Usa a função mostrarMensagem existente
+                // Usa a função mostrarMensagem existente, com o botão de Intervalo Almoço/Janta
                 mostrarMensagem(
-                    `Tempo mínimo para finalização é de ${TEMPO_MINIMO} minutos!\n` +
-                    `       Aguarde mais ${minutosFaltantes} minutos.`
+                    `Tempo mínimo: ${TEMPO_MINIMO} minutos`,
+                    () => mostrarPaginaPrincipal(),
+                    { idLimpeza }
                 );
-                
+
                 return;
             }
 
-           
+
 
             // Se for maior ou igual, PERGUNTA CONFIRMAÇÃO
             if (tempoDecorridoMinutos >= TEMPO_MINIMO) {
                 const confirmar = await mostrarPopupConfirmacaoFinalizar(limpeza, tempoDecorridoMinutos);
-                
-                if (confirmar) {
-                    const response = await fetch("/api/limpeza/aguardando_validacao", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ id_limpeza: idLimpeza })
-                    });
 
-                    const resultado = await response.json();
-
-                    if (!response.ok) {
-                        if (resultado.erro === "TEMPO_MINIMO_NAO_ATINGIDO") {
-                            // Se o backend retornar erro, usa a mesma função
-                            mostrarMensagem(resultado.mensagem);
-                            return;
-                        }
-                        throw new Error(resultado.erro || "Erro ao finalizar limpeza");
-                    }
-
-                    console.log("✅ Limpeza finalizada, aguardando validação:", resultado);
-
-                    // Atualiza a UI
-                    const card = document.querySelector(`.card-limpeza[data-id="${idLimpeza}"]`);
-                    limpeza.status = "AGUARDANDO_VALIDACAO";
-
-                    card.querySelector(".btn-finalizar")?.remove();
-                    
-                    const aguardando = document.createElement("div");
-                    aguardando.className = "aguardando-validacao";
-                    aguardando.innerHTML = `
-                        <div class="spinner"></div>
-                        <p>Aguardando Validação</p>
-                        <button class="btn-validar" data-id="${idLimpeza}">
-                            Validar Limpeza
-                        </button>
-                    `;
-                    card.appendChild(aguardando);
+                if (!confirmar) {
+                    mostrarPaginaPrincipal();
+                    return;
                 }
+
+                const response = await fetch("/api/limpeza/aguardando_validacao", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id_limpeza: idLimpeza, id_cartao_asg: idCartaoAsg })
+                });
+
+                const resultado = await response.json();
+
+                if (!response.ok) {
+                    if (resultado.erro === "TEMPO_MINIMO_NAO_ATINGIDO") {
+                        mostrarMensagem(resultado.mensagem, () => mostrarPaginaPrincipal(), { idLimpeza });
+                        return;
+                    }
+                    if (resultado.erro === "ASG_INVALIDO") {
+                        mostrarMensagem(resultado.mensagem, () => mostrarPaginaPrincipal());
+                        return;
+                    }
+                    throw new Error(resultado.erro || "Erro ao finalizar limpeza");
+                }
+
+                console.log("✅ Limpeza finalizada, aguardando validação:", resultado);
+
+                // Atualiza a UI
+                const card = document.querySelector(`.card-limpeza[data-id="${idLimpeza}"]`);
+                limpeza.status = "AGUARDANDO_VALIDACAO";
+
+                card.querySelector(".btn-finalizar")?.remove();
+
+                const aguardando = document.createElement("div");
+                aguardando.className = "aguardando-validacao";
+                aguardando.innerHTML = `
+                    <div class="spinner"></div>
+                    <p>Aguardando Validação</p>
+                    <button class="btn-validar" data-id="${idLimpeza}">
+                        Validar Limpeza
+                    </button>
+                `;
+                card.appendChild(aguardando);
+
+                mostrarPaginaPrincipal();
             }
 
         } catch (e) {
             console.error("Erro ao colocar em aguardando validação", e);
-            
+
             // Em caso de erro, também usa a função mostrarMensagem
-            mostrarMensagem(`❌ Erro: ${e.message}`);
+            mostrarMensagem(`❌ Erro: ${e.message}`, () => mostrarPaginaPrincipal());
         }
     }
 
+
+    /* =========================
+       LEITOR DE CARTÃO DO ASG (INTERVALO ALMOÇO/JANTA)
+    ========================= */
+    let idLimpezaParaIntervalo = null;
+
+    function abrirPopupLeitorIntervalo(idLimpeza) {
+        idLimpezaParaIntervalo = idLimpeza;
+
+        ocultarPaginaPrincipal();
+        mostrar(DOM.popupLeitorIntervalo);
+        DOM.inputCartaoIntervaloOculto.value = "";
+        DOM.inputCartaoIntervaloOculto.focus();
+    }
+
+    DOM.fecharLeitorIntervalo?.addEventListener("click", () => {
+        ocultar(DOM.popupLeitorIntervalo);
+        DOM.inputCartaoIntervaloOculto.value = "";
+        idLimpezaParaIntervalo = null;
+        mostrarPaginaPrincipal();
+    });
+
+    let timerLeitorIntervalo = null;
+    let validandoIntervalo = false;
+
+    DOM.inputCartaoIntervaloOculto?.addEventListener("input", () => {
+        if (validandoIntervalo) return;
+
+        let valor = DOM.inputCartaoIntervaloOculto.value.replace(/\D/g, "");
+        if (valor.length > 1 && valor.startsWith("0")) {
+            valor = valor.substring(1);
+        }
+        DOM.inputCartaoIntervaloOculto.value = valor;
+
+        clearTimeout(timerLeitorIntervalo);
+        timerLeitorIntervalo = setTimeout(() => {
+            if (valor.length < 9 || valor.length > 10) return;
+            ativarIntervalo(valor);
+        }, 120);
+    });
+
+    async function ativarIntervalo(idCartao) {
+        validandoIntervalo = true;
+        const idLimpeza = idLimpezaParaIntervalo;
+
+        try {
+            const resp = await fetch("/api/limpeza/ativar_intervalo", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id_limpeza: idLimpeza, id_cartao_asg: idCartao })
+            });
+
+            validarJSON(resp);
+            const resultado = await resp.json();
+
+            ocultar(DOM.popupLeitorIntervalo);
+            DOM.inputCartaoIntervaloOculto.value = "";
+
+            if (!resp.ok) {
+                mostrarMensagem(
+                    resultado.mensagem || "Não foi possível ativar o Intervalo.",
+                    () => mostrarPaginaPrincipal()
+                );
+                return;
+            }
+
+            const limpeza = limpezasAtivas.find(l => l.id == idLimpeza);
+            if (limpeza) limpeza.intervalo_liberado = 1;
+            marcarIntervaloLiberadoNaTela(idLimpeza);
+
+            mostrarMensagem(
+                "Intervalo liberado! Outro ASG já pode finalizar essa limpeza.",
+                () => mostrarPaginaPrincipal()
+            );
+
+        } catch (erro) {
+            console.error("❌ Erro ao ativar intervalo:", erro);
+            ocultar(DOM.popupLeitorIntervalo);
+            DOM.inputCartaoIntervaloOculto.value = "";
+            mostrarMensagem("Erro ao ativar Intervalo.", () => mostrarPaginaPrincipal());
+        } finally {
+            validandoIntervalo = false;
+            idLimpezaParaIntervalo = null;
+        }
+    }
+
+    function marcarIntervaloLiberadoNaTela(idLimpeza) {
+        const card = document.querySelector(`.card-limpeza[data-id="${idLimpeza}"]`);
+        if (!card || card.querySelector(".badge-intervalo")) return;
+
+        const badge = document.createElement("div");
+        badge.className = "badge-intervalo";
+        badge.textContent = "🍽️ Intervalo liberado";
+        card.querySelector(".tempo")?.insertAdjacentElement("afterend", badge);
+    }
 
     function renderizarBotaoFinalizarUI(container, id) {
         container.innerHTML = `

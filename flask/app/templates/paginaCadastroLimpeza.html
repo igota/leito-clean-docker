@@ -241,7 +241,7 @@
                 <input type="datetime-local" class="form-control" id="dataVencimento" style="background-color: #e9ecef;" disabled required>
                 <div class="input-group-text">
                   <input class="form-check-input mt-0" type="checkbox" id="calcular8dias">
-                  <label class="form-check-label ms-1">+8 dias</label>
+                  <label class="form-check-label ms-1" id="labelVencimento">+8 dias</label>
                 </div>
               </div>
             </div>
@@ -262,10 +262,10 @@
             <div class="col-md-6">
               <label class="form-label">Tempo <span class="text-danger">*</span></label>
               <div class="d-flex align-items-center">
-                <input type="text" id="tempoTotalText" class="form-control me-2" placeholder="00:00" value="50:00" required>
+                <input type="text" id="tempoTotalText" class="form-control me-2" placeholder="00:00" value="35:00" required>
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" id="tempo50min" checked onchange="toggleTempo50min()">
-                  <label class="form-check-label">50 min</label>
+                  <label class="form-check-label" id="labelTempoMinimo">35 min</label>
                 </div>
               </div>
             </div>
@@ -432,7 +432,7 @@
                 <input type="datetime-local" class="form-control" id="editDataVencimento" style="background-color: #e9ecef;">
                 <div class="input-group-text">
                   <input class="form-check-input mt-0" type="checkbox" id="editCalcular8dias">
-                  <label class="form-check-label ms-1">+8 dias</label>
+                  <label class="form-check-label ms-1" id="editLabelVencimento">+8 dias</label>
                 </div>
               </div>
             </div>
@@ -452,10 +452,10 @@
             <div class="col-md-6">
               <label class="form-label">Tempo</label>
               <div class="d-flex align-items-center">
-                <input type="text" id="editTempoTotal" class="form-control me-2" placeholder="00:00:00" value="00:50:00">
+                <input type="text" id="editTempoTotal" class="form-control me-2" placeholder="00:00" value="35:00">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" id="editTempo50min" checked onchange="toggleTempo50minEdicao()">
-                  <label class="form-check-label">50 min</label>
+                  <label class="form-check-label" id="editLabelTempoMinimo">35 min</label>
                 </div>
               </div>
             </div>

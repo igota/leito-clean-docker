@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- ATIVA O SCROLL VERTICAL NESTA PÁGINA -->
+<script>
+    document.body.classList.add('pagina-com-scroll');
+</script>
+
+<title>LeitoClean - Dashboard</title>
+<link rel="stylesheet" href="/static/css/paginaDashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<div class="dashboard-container">
+
+    <div class="dashboard-topo">
+        <div class="dashboard-topo-acoes">
+            <a href="{{ url_for('manager.pagina_relatorios') }}" class="btn-voltar">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <button id="btnMaximizarDashboard" class="btn-maximizar" title="Ocultar menu lateral">
+                <i class="fas fa-expand"></i>
+            </button>
+        </div>
+        <h2 class="titulo-pagina">Dashboard de Limpezas</h2>
+    </div>
+
+    <!-- ===== FILTROS ===== -->
+    <div class="dashboard-filtros">
+        <div class="filtro-campo">
+            <label>Setor</label>
+            <select id="filtroSetor">
+                <option value="__TODOS__">Todos os Setores</option>
+            </select>
+        </div>
+
+        <div class="filtro-campo">
+            <label>Leito</label>
+            <select id="filtroLeito" disabled>
+                <option value="__TODOS__">Todos os Leitos</option>
+            </select>
+        </div>
+
+        <div class="filtro-campo">
+            <label>Período</label>
+            <div class="periodo">
+                <input type="date" id="filtroInicio">
+                <input type="date" id="filtroFim">
+            </div>
+        </div>
+
+        <div class="filtro-campo periodos-rapidos-wrap">
+            <label>&nbsp;</label>
+            <div class="periodos-rapidos">
+                <button type="button" class="periodo-btn" data-periodo="hoje">Hoje</button>
+                <button type="button" class="periodo-btn" data-periodo="7dias">7 dias</button>
+                <button type="button" class="periodo-btn ativo" data-periodo="30dias">30 dias</button>
+                <button type="button" class="periodo-btn" data-periodo="90dias">90 dias</button>
+            </div>
+        </div>
+
+        <button id="btnAplicarFiltros" class="btn-aplicar">
+            <i class="fas fa-filter"></i> Aplicar
+        </button>
+    </div>
+
+    <!-- ===== KPIs ===== -->
+    <div class="dashboard-kpis">
+        <div class="kpi-card">
+            <i class="fas fa-broom"></i>
+            <div>
+                <span class="kpi-valor" id="kpiTotal">—</span>
+                <span class="kpi-label">Limpezas no período</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <i class="fas fa-circle-check"></i>
+            <div>
+                <span class="kpi-valor" id="kpiSla">—</span>
+                <span class="kpi-label">Dentro do prazo (SLA)</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <i class="fas fa-clock"></i>
+            <div>
+                <span class="kpi-valor" id="kpiTempoMedio">—</span>
+                <span class="kpi-label">Tempo médio de limpeza</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-alerta">
+            <i class="fas fa-triangle-exclamation"></i>
+            <div>
+                <span class="kpi-valor" id="kpiAtrasoMedio">—</span>
+                <span class="kpi-label">Atraso médio (limpezas vencidas)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GRÁFICOS ===== -->
+    <div class="dashboard-graficos">
+
+        <div class="grafico-card grafico-largo">
+            <h3><i class="fas fa-chart-line"></i> Limpezas ao longo do tempo</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoVolume"></canvas>
+            </div>
+        </div>
+
+        <div class="grafico-card">
+            <h3><i class="fas fa-gauge-high"></i> Cumprimento de prazo (SLA)</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoSla"></canvas>
+            </div>
+        </div>
+
+        <div class="grafico-card">
+            <h3><i class="fas fa-broom"></i> Limpezas por tipo</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoTipo"></canvas>
+            </div>
+        </div>
+
+        <div class="grafico-card grafico-largo">
+            <h3><i class="fas fa-stopwatch"></i> Tempo médio por setor</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoTempoSetor"></canvas>
+            </div>
+        </div>
+
+        <div class="grafico-card grafico-largo">
+            <h3><i class="fas fa-user-check"></i> Desempenho por ASG</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoAsg"></canvas>
+            </div>
+        </div>
+
+        <div class="grafico-card grafico-largo">
+            <h3><i class="fas fa-bed-pulse"></i> Leitos que mais atrasam</h3>
+            <div class="grafico-canvas-wrap">
+                <canvas id="graficoRankingLeitos"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="dashboardVazio" class="dashboard-vazio oculto">
+        Nenhum registro de limpeza encontrado para os filtros selecionados.
+    </div>
+
+</div>
+
+<script src="/static/js/paginaDashboard.js"></script>
+
+{% endblock %}

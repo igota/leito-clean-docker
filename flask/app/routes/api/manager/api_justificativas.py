@@ -13,8 +13,8 @@ justificativas_bp = Blueprint('justificativas', __name__)
 
 # Listar justificativas (com filtros opcionais)
 @justificativas_bp.route("/api/justificativas", methods=["GET"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ENFERMAGEM', 'ADMIN', 'GERENTE', 'NAO_CADASTRADO')
+@login_required
 def listar_justificativas():
     setor = request.args.get("setor")
     leito = request.args.get("leito")
@@ -97,8 +97,8 @@ def listar_justificativas():
 
 # Obter uma justificativa específica
 @justificativas_bp.route("/api/justificativas/<int:id>", methods=["GET"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ENFERMAGEM', 'ADMIN', 'GERENTE', 'NAO_CADASTRADO')
+@login_required
 def obter_justificativa(id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -163,8 +163,8 @@ def obter_justificativa(id):
 
 # Criar nova justificativa
 @justificativas_bp.route("/api/justificativas", methods=["POST"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ENFERMAGEM', 'ADMIN', 'GERENTE')
+@login_required
 def criar_justificativa():
     dados = request.json
     
@@ -278,8 +278,8 @@ def criar_justificativa():
 
 
 @justificativas_bp.route("/api/justificativas/<int:id>", methods=["PUT"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'ENFERMAGEM')
+@login_required
 def atualizar_justificativa(id):
     dados = request.json
     
@@ -435,8 +435,8 @@ def atualizar_justificativa(id):
         conn.close()
 
 @justificativas_bp.route("/api/justificativas/<int:id>", methods=["DELETE"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'ENFERMAGEM')
+@login_required
 def excluir_justificativa(id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -474,8 +474,8 @@ def excluir_justificativa(id):
 
 # Rota para verificar se já existe justificativa para um setor/leito (opcional)
 @justificativas_bp.route("/api/justificativas/verificar", methods=["GET"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO', 'ENFERMAGEM')
+@login_required
 def verificar_justificativa():
     setor = request.args.get("setor")
     leito = request.args.get("leito")
@@ -504,8 +504,8 @@ def verificar_justificativa():
 
 # 🔥 NOVA ROTA: Obter histórico de versões de uma justificativa
 @justificativas_bp.route("/api/justificativas/<int:id>/versoes", methods=["GET"])
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO', 'ENFERMAGEM')
+@login_required
 def listar_versoes_justificativa(id):
     conn = get_db_connection()
     cursor = conn.cursor()

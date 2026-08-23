@@ -617,6 +617,104 @@ async function salvarEdicao(event) {
     }
 }
 
+// ========== BUSCA NO ICONTROL ==========
+function abrirBuscaIcontrol() {
+    document.getElementById("valorBuscaIcontrol").value = "";
+    document.getElementById("tipoBuscaNome").checked = true;
+    document.getElementById("valorBuscaIcontrol").placeholder = "Digite o nome...";
+    document.getElementById("alertBuscaIcontrol").style.display = "none";
+    document.getElementById("resultadosBuscaIcontrolBody").innerHTML = `
+        <tr><td colspan="5" class="text-center text-muted py-3">Escolha o tipo de busca e digite o valor.</td></tr>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById("modalBuscaIcontrol"));
+    modal.show();
+}
+
+document.querySelectorAll('input[name="tipoBuscaIcontrol"]').forEach(radio => {
+    radio.addEventListener("change", () => {
+        const input = document.getElementById("valorBuscaIcontrol");
+        input.placeholder = radio.value === "nome" ? "Digite o nome..." : "Digite o identificador...";
+    });
+});
+
+async function buscarIcontrol(event) {
+    event.preventDefault();
+
+    const tipo = document.querySelector('input[name="tipoBuscaIcontrol"]:checked').value;
+    const valor = document.getElementById("valorBuscaIcontrol").value.trim();
+    const tbody = document.getElementById("resultadosBuscaIcontrolBody");
+    const alertBox = document.getElementById("alertBuscaIcontrol");
+
+    alertBox.style.display = "none";
+    if (!valor) return;
+
+    tbody.innerHTML = `
+        <tr><td colspan="5" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary"></div> Buscando...
+        </td></tr>
+    `;
+
+    try {
+        const response = await fetch("/api/buscar_funcionario_icontrol", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ tipo, valor })
+        });
+        const data = await response.json();
+
+        if (!data.sucesso) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Nenhum resultado.</td></tr>`;
+            alertBox.textContent = data.erro || "Erro na busca.";
+            alertBox.style.display = "block";
+            return;
+        }
+
+        if (data.resultados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Nenhum usuário encontrado.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = "";
+        data.resultados.forEach(u => {
+            const usuarioJson = JSON.stringify(u).replace(/'/g, "&apos;");
+            tbody.insertAdjacentHTML("beforeend", `
+                <tr>
+                    <td>${u.nome || "-"}</td>
+                    <td>${u.tipo_usuario || "-"}</td>
+                    <td>${u.numero_cartao || "-"}</td>
+                    <td>${u.identificador || "-"}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick='selecionarFuncionarioIcontrol(${usuarioJson})'>
+                            Selecionar
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    } catch (erro) {
+        console.error("Erro ao buscar no iControl:", erro);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Erro de conexão.</td></tr>`;
+    }
+}
+
+function selecionarFuncionarioIcontrol(usuario) {
+    if (!usuario.numero_cartao) {
+        const alertBox = document.getElementById("alertBuscaIcontrol");
+        alertBox.textContent = "Este registro do iControl não possui número de cartão.";
+        alertBox.style.display = "block";
+        return;
+    }
+
+    document.getElementById("nome").value = usuario.nome || "";
+
+    const idCartaoInput = document.getElementById("id_cartao");
+    idCartaoInput.value = usuario.numero_cartao;
+    validarid_cartaoNumerica(idCartaoInput);
+
+    bootstrap.Modal.getInstance(document.getElementById("modalBuscaIcontrol"))?.hide();
+}
+
 // ========== FUNÇÕES DE ALERTA ==========
 function mostrarAlerta(mensagem, contexto = "cadastro") {
     const alertBox =
@@ -710,6 +808,19 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('resize', () => {
     ajustarParaMenuLateral();
     ajustarAlturaTabela();
+});
+
+// Evento para limpar o modal de cadastro quando fechado
+document.getElementById("modalCadastro")?.addEventListener("hidden.bs.modal", () => {
+    const form = document.getElementById("formCadastro");
+    if (form) {
+        form.reset();
+        form.querySelectorAll(".is-invalid").forEach(el => {
+            el.classList.remove("is-invalid");
+        });
+    }
+    const alert = document.getElementById("alertCadastro");
+    if (alert) alert.style.display = "none";
 });
 
 // Evento para limpar o modal de edição quando fechado

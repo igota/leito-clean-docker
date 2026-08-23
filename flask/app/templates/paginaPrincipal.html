@@ -31,7 +31,7 @@
             <button id="btnLista" class="view-btn" title="Visualização em Lista">
                 <i class="fas fa-list"></i>
             </button>
-            <button id="btnMaximizar" class="view-btn" title="Maximizar Visualização">
+            <button id="btnMaximizar" class="view-btn" title="Ocultar menu lateral">
                 <i class="fas fa-expand"></i>
             </button>
         </div>
@@ -201,5 +201,6 @@
 <!-- Scripts na ordem correta -->
 <script src="{{ url_for('static', filename='js/shared.js') }}"></script>           <!-- 1º: Funções compartilhadas -->
 <script src="{{ url_for('static', filename='js/paginaPrincipal.js') }}"></script>  <!-- 2º: Lógica da página principal -->
+<script src="{{ url_for('static', filename='js/sse_logout.js') }}"></script>       <!-- 3º: Logout em tempo real (só aqui, ver comentário no arquivo) -->
 
 {% endblock %}

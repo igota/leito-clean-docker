@@ -111,6 +111,26 @@ Sistema Leito Clean
         return False
 
 
+def _liberar_reserva_email(leito_id):
+    """
+    Devolve o leito pra fila de notificação (email_enviado = 0).
+
+    atualiza_pendentes() já reserva (email_enviado = 1) os leitos antes de
+    chamar enviar_notificacoes_lote(), pra evitar envio duplicado se mais de
+    um processo rodar o polling ao mesmo tempo. Qualquer caminho aqui que NÃO
+    termine em envio bem-sucedido precisa chamar isso, senão o leito fica
+    marcado como "notificado" sem nunca ter sido de fato.
+    """
+    conn = get_db_connection()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "UPDATE registro_limpeza SET email_enviado = 0 WHERE id = %s",
+            (leito_id,)
+        )
+        conn.commit()
+    conn.close()
+
+
 def enviar_notificacoes_lote(leitos_pendentes):
     """
     Processa múltiplos leitos pendentes e envia notificações
@@ -119,23 +139,24 @@ def enviar_notificacoes_lote(leitos_pendentes):
         try:
             # Busca informações completas do leito
             info_leito = buscar_info_completa_para_notificacao(leito['id'])
-            
+
             if not info_leito or not info_leito['setor_id']:
                 print(f"⚠️ Setor não encontrado para o leito {leito['numero_leito']}")
+                _liberar_reserva_email(leito['id'])
                 continue
-            
+
             # Busca emails para o setor (agora com mais detalhes)
             emails_com_nomes = buscar_emails_por_setor_com_nomes(info_leito['setor_id'])
-            
+
             if emails_com_nomes:
                 print(f"\n📧 Enviando notificação para o setor: {info_leito['setor_nome']}")
                 print(f"   Usuários notificados:")
                 for item in emails_com_nomes:
                     print(f"   • {item['nome']} <{item['email']}>")
-                
+
                 # Extrair apenas os emails para envio
                 destinatarios = [item['email'] for item in emails_com_nomes]
-                
+
                 # Envia o email
                 enviado = enviar_email_pendente(
                     destinatarios=destinatarios,
@@ -145,24 +166,20 @@ def enviar_notificacoes_lote(leitos_pendentes):
                     ultima_limpeza=info_leito['data_validacao'],
                     vencimento=info_leito['vencimento']
                 )
-                
+
                 if enviado:
                     print(f"✅ Email enviado com sucesso para {len(destinatarios)} usuário(s) do setor {info_leito['setor_nome']}")
-                    
-                    # Marca como email enviado
-                    conn = get_db_connection()
-                    with conn.cursor() as cursor:
-                        cursor.execute(
-                            "UPDATE registro_limpeza SET email_enviado = 1 WHERE id = %s",
-                            (leito['id'],)
-                        )
-                        conn.commit()
-                    conn.close()
+                    # email_enviado já está em 1 desde a reserva feita por atualiza_pendentes()
+                else:
+                    print(f"❌ Falha no envio — leito {leito['numero_leito']} será tentado novamente no próximo ciclo")
+                    _liberar_reserva_email(leito['id'])
             else:
                 print(f"📭 Nenhum usuário configurado para receber notificações do setor {info_leito['setor_nome']}")
-                    
+                _liberar_reserva_email(leito['id'])
+
         except Exception as e:
             print(f"❌ Erro ao processar notificação para leito {leito.get('numero_leito', 'desconhecido')}: {e}")
+            _liberar_reserva_email(leito['id'])
 
 
 def buscar_emails_por_setor_com_nomes(setor_id):

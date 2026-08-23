@@ -27,6 +27,77 @@ async function abrirJustificativaLeito(setor, leito) {
     }
 }
 
+// =========================================================
+// ⏱️ CRONÔMETRO AO VIVO (TOOLTIP) - EM_ANDAMENTO / AGUARDANDO_VALIDACAO
+// Mesma lógica do tablet: conta a partir de data_inicio e só para
+// quando o enfermeiro valida a limpeza.
+// =========================================================
+let cronometroTooltipEl = null;
+let cronometroTooltipIntervalo = null;
+
+function formatarTempoPainel(seg) {
+    seg = Math.max(0, seg);
+    const h = Math.floor(seg / 3600);
+    const m = Math.floor((seg % 3600) / 60);
+    const s = seg % 60;
+
+    if (h > 0) {
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function garantirCronometroTooltip() {
+    if (!cronometroTooltipEl) {
+        cronometroTooltipEl = document.createElement("div");
+        cronometroTooltipEl.className = "cronometro-tooltip";
+        document.body.appendChild(cronometroTooltipEl);
+    }
+    return cronometroTooltipEl;
+}
+
+function posicionarCronometroTooltip(evento) {
+    if (!cronometroTooltipEl) return;
+    const offset = 14;
+    cronometroTooltipEl.style.left = `${evento.pageX + offset}px`;
+    cronometroTooltipEl.style.top = `${evento.pageY + offset}px`;
+}
+
+function anexarCronometroHover(elemento, marcos) {
+    // marcos: array de { rotulo, dataStr } - cada um vira uma linha no tooltip
+    const validos = marcos
+        .map(m => ({ rotulo: m.rotulo, inicio: new Date((m.dataStr || "").replace(" ", "T")).getTime() }))
+        .filter(m => !isNaN(m.inicio));
+
+    if (validos.length === 0) return;
+
+    elemento.style.cursor = "help";
+
+    const atualizarTexto = () => {
+        const agora = Date.now();
+        cronometroTooltipEl.innerHTML = validos
+            .map(m => `<i class="fas fa-stopwatch"></i> ${m.rotulo}: ${formatarTempoPainel(Math.floor((agora - m.inicio) / 1000))}`)
+            .join("<br>");
+    };
+
+    elemento.addEventListener("mouseenter", (e) => {
+        garantirCronometroTooltip();
+        atualizarTexto();
+        cronometroTooltipEl.style.display = "block";
+        posicionarCronometroTooltip(e);
+
+        clearInterval(cronometroTooltipIntervalo);
+        cronometroTooltipIntervalo = setInterval(atualizarTexto, 1000);
+    });
+
+    elemento.addEventListener("mousemove", posicionarCronometroTooltip);
+
+    elemento.addEventListener("mouseleave", () => {
+        clearInterval(cronometroTooltipIntervalo);
+        if (cronometroTooltipEl) cronometroTooltipEl.style.display = "none";
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const painelLista = document.getElementById("viewLista");
     const painelGrade = document.getElementById("viewGrade");
@@ -37,26 +108,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const btnMaximizar = document.getElementById("btnMaximizar");
 
-    // ===== CONTROLE DE FULLSCREEN =====
     btnMaximizar.addEventListener("click", () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-            document.body.classList.add("fullscreen-mode");
-            btnMaximizar.innerHTML = '<i class="fas fa-compress"></i>';
-            btnMaximizar.title = "Sair do modo maximizado";
-        } else {
-            document.exitFullscreen();
-            document.body.classList.remove("fullscreen-mode");
-            btnMaximizar.innerHTML = '<i class="fas fa-expand"></i>';
-            btnMaximizar.title = "Maximizar Visualização";
-        }
-    });
+        const ocultando = !document.body.classList.contains("menu-oculto");
 
-    document.addEventListener("fullscreenchange", () => {
-        if (!document.fullscreenElement) {
-            document.body.classList.remove("fullscreen-mode");
+        document.body.classList.toggle("menu-oculto", ocultando);
+
+        if (ocultando) {
+            btnMaximizar.innerHTML = '<i class="fas fa-compress"></i>';
+            btnMaximizar.title = "Mostrar menu lateral";
+        } else {
             btnMaximizar.innerHTML = '<i class="fas fa-expand"></i>';
-            btnMaximizar.title = "Maximizar Visualização";
+            btnMaximizar.title = "Ocultar menu lateral";
         }
     });
 
@@ -271,7 +333,19 @@ document.addEventListener("DOMContentLoaded", () => {
                         };
                         leito.appendChild(justificativaIcon);
                     }
-                    
+
+                    // ⏱️ CRONÔMETRO AO VIVO NO HOVER (em andamento / aguardando validação)
+                    if (l.status === "EM_ANDAMENTO") {
+                        anexarCronometroHover(leito, [
+                            { rotulo: "Em limpeza há", dataStr: l.data_inicio }
+                        ]);
+                    } else if (l.status === "AGUARDANDO_VALIDACAO") {
+                        anexarCronometroHover(leito, [
+                            { rotulo: "Tempo total", dataStr: l.data_inicio },
+                            { rotulo: "Aguardando validação há", dataStr: l.data_fim }
+                        ]);
+                    }
+
                     // Badge de alerta
                     if (l.status === "CONCLUIDA" && l.data_validacao) {
                         const badgeHTML = criarBadgeHTML(l.dias_alerta);
@@ -335,7 +409,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     };
                     leito.appendChild(justificativaIcon);
                 }
-                
+
+                // ⏱️ CRONÔMETRO AO VIVO NO HOVER (em andamento / aguardando validação)
+                if (l.status === "EM_ANDAMENTO") {
+                    anexarCronometroHover(leito, [
+                        { rotulo: "Em limpeza há", dataStr: l.data_inicio }
+                    ]);
+                } else if (l.status === "AGUARDANDO_VALIDACAO") {
+                    anexarCronometroHover(leito, [
+                        { rotulo: "Tempo total", dataStr: l.data_inicio },
+                        { rotulo: "Aguardando validação há", dataStr: l.data_fim }
+                    ]);
+                }
+
                 if (l.status === "CONCLUIDA" && l.data_validacao) {
                     const badgeHTML = criarBadgeHTML(l.dias_alerta);
                     if (badgeHTML) {

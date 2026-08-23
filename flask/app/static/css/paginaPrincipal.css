@@ -328,6 +328,21 @@
 .status-andamento-grid { background-color: var(--status-andamento); color: #000; }
 .status-validacao-grid { background-color: var(--status-validacao); color: #000; }
 
+.cronometro-tooltip {
+    display: none;
+    position: absolute;
+    z-index: 9999;
+    background-color: var(--cor-primaria);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 /* Card pendente - com animação otimizada */
 .status-pendente-grid {
     background-color: var(--status-pendente);

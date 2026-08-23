@@ -1,12 +1,11 @@
-import redis
 import json
-from datetime import datetime
+from ..config.settings import SESSION_REDIS
 
 def monitorar_sessoes():
     """Função para debug - monitora sessões ativas no Redis"""
     
     # Conectar ao Redis DB 1 (sessões)
-    r = redis.Redis(host='localhost', port=6379, db=1, decode_responses=True)
+    r = SESSION_REDIS
     
     # Buscar todas as chaves de sessão
     keys = r.keys('sessao:*')

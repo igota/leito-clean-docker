@@ -69,9 +69,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (leito) {
         titulo.textContent = `Leito ${leito.numero_leito}`;
-        paciente.innerHTML = leito.paciente 
-        ? `<strong>Paciente:</strong> ${leito.paciente}` 
+        paciente.innerHTML = leito.paciente
+        ? `<strong>Paciente:</strong> ${leito.paciente}`
         : "Sem paciente";
+    }
+
+    // Centro Cirúrgico só tem "Terminal", cujas opções são Programada/Extra
+    const setorNorm = (leito?.setor || "").trim().toUpperCase();
+    const ehCentroCirurgico = setorNorm === "CENTRO CIRURGICO" || setorNorm === "CENTRO CIRÚRGICO";
+
+    if (ehCentroCirurgico) {
+        const btnConcorrente = popupTipo.querySelector('.tipoBtn[data-tipo="Concorrente"]');
+        if (btnConcorrente) btnConcorrente.classList.add("oculto");
+
+        const btnAlta = popupTerminal.querySelector('.tipoBtn[data-tipo="Alta / Óbito / Transferência"]');
+        if (btnAlta) {
+            btnAlta.dataset.tipo = "Programada";
+            btnAlta.textContent = "🛏️ Programada";
+        }
+
+        const btnLonga = popupTerminal.querySelector('.tipoBtn[data-tipo="Longa Permanência"]');
+        if (btnLonga) {
+            btnLonga.dataset.tipo = "Extra";
+            btnLonga.textContent = "🕒 Extra";
+        }
     }
 
     function mostrarConteudoPrincipal() {

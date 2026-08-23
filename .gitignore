@@ -16,3 +16,6 @@ backups/
 .vscode/
 .idea/
 Thumbs.db
+
+# Dumps/scratch locais
+page_dump.txt

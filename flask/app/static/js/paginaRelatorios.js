@@ -30,6 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
         card.addEventListener("click", () => {
             const tipo = card.dataset.tipo;
 
+            if (tipo === "dashboard") {
+                window.location.href = "/relatorios/dashboard";
+                return;
+            }
+
             document.getElementById("tipoRelatorio").value = tipo;
             document.getElementById("tituloPopup").innerText =
                 tipo === "leito" ? "Relatório por Leito" :

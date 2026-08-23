@@ -81,6 +81,20 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="pagination-container">
+                <div class="pagination-info" id="dispositivosPaginationInfo"></div>
+                <div class="pagination-controls" id="dispositivosPaginationControls"></div>
+                <div class="pagination-size-selector">
+                    <label for="dispositivosItemsPerPage">Itens/página:</label>
+                    <select id="dispositivosItemsPerPage" class="form-select form-select-sm">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         <!-- Aba Setores -->
@@ -98,7 +112,7 @@
             </div>
 
             <div class="tabela-container">
-                <table class="table table-striped table-bordered">
+                <table class="table table-striped table-bordered" id="tabelaSetores">
                     <thead class="table-dark">
                         <tr>
                             <th>Setor</th>
@@ -144,6 +158,20 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <div class="pagination-container">
+                <div class="pagination-info" id="setoresPaginationInfo"></div>
+                <div class="pagination-controls" id="setoresPaginationControls"></div>
+                <div class="pagination-size-selector">
+                    <label for="setoresItemsPerPage">Itens/página:</label>
+                    <select id="setoresItemsPerPage" class="form-select form-select-sm">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -231,6 +259,20 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <div class="pagination-container">
+        <div class="pagination-info" id="usuariosPaginationInfo"></div>
+        <div class="pagination-controls" id="usuariosPaginationControls"></div>
+        <div class="pagination-size-selector">
+            <label for="usuariosItemsPerPage">Itens/página:</label>
+            <select id="usuariosItemsPerPage" class="form-select form-select-sm">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </div>
     </div>
 </div>
 

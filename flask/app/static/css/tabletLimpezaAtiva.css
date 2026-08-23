@@ -344,13 +344,29 @@ body {
     color: white;
     padding: 10px 22px;
     border-radius: 8px;
-    font-size: 1em;
+    font-size: 1.2em;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
 #fecharMensagemBtn:hover {
     background-color: #0056b3;
+}
+
+#btnIntervaloAlmocoJanta {
+    background-color: #27ae60;
+    border: none;
+    color: white;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-right: 10px;
+}
+
+#btnIntervaloAlmocoJanta:hover {
+    background-color: #219653;
 }
 
 /* ======================
@@ -501,6 +517,21 @@ body {
 .btn-validar:hover {
     background: #219653;
     transform: translateY(-1px);
+}
+
+/* ======================
+   SELO DE INTERVALO LIBERADO
+   ====================== */
+.badge-intervalo {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffcc80;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 10px 0;
+    text-align: center;
 }
 
 /* ======================

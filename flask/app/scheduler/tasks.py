@@ -7,7 +7,7 @@ from datetime import datetime
 from ..database.conexao import get_db_connection
 from ..services.notificacao_email import enviar_notificacoes_lote
 from ..config.settings import atualizacao_evento
-from ..events.redis_events import publicar_evento  # 👈 NOVO IMPORT
+from ..events.redis_events import publicar_evento 
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,8 @@ def verificar_pendentes_por_vencimento(limpeza_id=None):
     """
     TAREFA: Verifica leitos que devem se tornar pendentes
     """
+    leito_info_para_notificar = None
+
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -108,12 +110,10 @@ def verificar_pendentes_por_vencimento(limpeza_id=None):
                             WHERE rl.id = %s
                         """, (limpeza_id,))
                         
-                        leito_info = cursor.fetchone()
-                        if leito_info:
-                            enviar_notificacoes_lote([leito_info])
+                        leito_info_para_notificar = cursor.fetchone()
                     else:
                         logger.info(f"   Nenhuma alteração - limpeza {limpeza_id} não atende critérios")
-                    
+
                     return afetados
                 else:
                     logger.info(f"   Limpeza {limpeza_id} ainda não venceu")
@@ -124,6 +124,12 @@ def verificar_pendentes_por_vencimento(limpeza_id=None):
         return 0
     finally:
         conn.close()
+
+        # 🔴 Envia a notificação só DEPOIS de liberar a conexão do banco —
+        # o envio de email é síncrono (SMTP) e pode levar segundos; não faz
+        # sentido prender uma vaga do pool (maxconnections=20) durante isso.
+        if leito_info_para_notificar:
+            enviar_notificacoes_lote([leito_info_para_notificar])
 
 
 def verificar_alerta_dias(limpeza_id: int, dias: int):

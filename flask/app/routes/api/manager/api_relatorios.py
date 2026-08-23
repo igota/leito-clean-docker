@@ -2,11 +2,11 @@ from flask import Blueprint, request, jsonify, session
 import pymysql
 from ....database.conexao import get_db_connection
 from ....utils.helpers import login_required, tipo_required
-from datetime import datetime
+from datetime import datetime, timedelta
 from ....reports.csv import exportar_csv
 from ....reports.pdf import exportar_pdf
 from ....reports.xlsx import exportar_xlsx
-import traceback
+
 
 # Criar o blueprint
 relatorios_bp = Blueprint('relatorios', __name__)
@@ -87,13 +87,19 @@ def dados_relatorio():
                     rl.data_inicio,
                     rl.data_fim,
                     rl.data_validacao,
-                    asg.nome as funcionario_asg,      -- Nome do ASG via JOIN
-                    enf.nome as funcionario_enf,      -- Nome do Enfermeiro via JOIN
+                    CASE
+                        WHEN rl.asg_intervalo IS NOT NULL AND rl.asg_intervalo != rl.funcionario_asg_id
+                        THEN CONCAT(asg.nome, ' / ', asg_int.nome)
+                        ELSE asg.nome
+                    END as funcionario_asg,
+                    enf.nome as funcionario_enf,
                     rl.tempo_total_text,
-                    rl.status
+                    rl.status,
+                    rl.vencimento
                 FROM registro_limpeza rl
-                LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
+                LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
+                LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
                 WHERE 1=1
             """
             params = []
@@ -116,7 +122,7 @@ def dados_relatorio():
 
             if inicio and fim:
                 inicio_dt = datetime.strptime(inicio, "%Y-%m-%d")
-                fim_dt = datetime.strptime(fim, "%Y-%m-%d") + datetime.timedelta(days=1)
+                fim_dt = datetime.strptime(fim, "%Y-%m-%d") + timedelta(days=1)
                 sql += " AND rl.data_inicio >= %s AND rl.data_inicio < %s"
                 params.extend([inicio_dt, fim_dt])
 
@@ -138,6 +144,9 @@ def dados_relatorio():
 
             if d.get("data_validacao"):
                 d["data_validacao"] = d["data_validacao"].strftime("%Y-%m-%d %H:%M:%S")
+
+            if d.get("vencimento"):
+                d["vencimento"] = d["vencimento"].strftime("%Y-%m-%d %H:%M:%S")
 
             dados.append(d)
 
@@ -179,13 +188,19 @@ def exportar_relatorio():
                     rl.data_inicio,
                     rl.data_fim,
                     rl.data_validacao,
-                    asg.nome as funcionario_asg,      -- Nome do ASG via JOIN
-                    enf.nome as funcionario_enf,      -- Nome do Enfermeiro via JOIN
+                    CASE
+                        WHEN rl.asg_intervalo IS NOT NULL AND rl.asg_intervalo != rl.funcionario_asg_id
+                        THEN CONCAT(asg.nome, ' / ', asg_int.nome)
+                        ELSE asg.nome
+                    END as funcionario_asg,
+                    enf.nome as funcionario_enf,
                     rl.tempo_total_text,
-                    rl.status
+                    rl.status,
+                    rl.vencimento
                 FROM registro_limpeza rl
-                LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
+                LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
+                LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
                 WHERE 1=1
             """
 

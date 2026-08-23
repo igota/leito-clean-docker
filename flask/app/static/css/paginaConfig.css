@@ -66,62 +66,216 @@ h2{
     background-color: #218838;
 }
 
+/* ======== CONTAINER DA TABELA (COM SCROLL) ======== */
+.tabela-container {
+    overflow-y: auto;
+    overflow-x: auto;
+    max-height: 500px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    border: 1px solid #ddd;
+    scroll-padding-bottom: 20px;
+    margin-bottom: 15px;
+}
+
 /* ======== TABELA ======== */
 .table {
     width: 100%;
     max-width: 100%;
-    border-collapse: collapse;
-    margin: 0 auto;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
     background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     text-align: center;
+    font-size: 0.9rem;
 }
 
 /* ======== CABEÇALHO FIXO ======== */
+.table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
 .table thead th {
     position: sticky;
     top: 0;
-    background-color: rgba(1, 55, 87, 1);
+    background-color: #013757 !important;
     color: #fff;
     text-transform: uppercase;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-    z-index: 2;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    z-index: 20;
     cursor: pointer;
     transition: background-color 0.3s ease;
     border: 1px solid #ddd;
     text-align: center;
+    padding: 10px 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
+.table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.table thead th:last-child {
+    border-top-right-radius: 12px;
 }
 
 .table thead th:hover {
-    background-color: #0056b3;
+    background-color: #0056b3 !important;
 }
 
 /* ======== ORDENAÇÃO (se usar) ======== */
 .table thead th.asc::after {
     content: ' ▲';
-    font-size: 12px;
-    margin-left: 5px;
+    font-size: 10px;
+    margin-left: 3px;
 }
 
 .table thead th.desc::after {
     content: ' ▼';
-    font-size: 12px;
-    margin-left: 5px;
+    font-size: 10px;
+    margin-left: 3px;
 }
 
 /* ======== LINHAS ======== */
+.table tbody {
+    background-color: #fff;
+}
+
 .table-striped tbody tr:hover {
     background-color: #f1f3f5;
     transition: background 0.2s;
 }
 
+.table tbody td {
+    padding: 8px 6px;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    background-color: #fff;
+    font-size: 0.9rem;
+}
+
+/* ======== BOTÕES DE AÇÃO NA TABELA ======== */
+.table tbody td .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+    margin: 0 1px;
+}
+
 /* ======== ÍCONES ======== */
 .table i {
     font-size: 1.1rem;
+}
+
+/* ======== SCROLLBAR PERSONALIZADA ======== */
+.tabela-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.tabela-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb {
+    background: #013757;
+    border-radius: 4px;
+}
+
+.tabela-container::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+/* ======== PAGINAÇÃO ======== */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 15px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    color: #013757;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-pagination {
+    background-color: #fff;
+    border: 1px solid #013757;
+    color: #013757;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 40px;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background-color: #013757;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.btn-pagination:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-pagination.active {
+    background-color: #013757;
+    color: #fff;
+    border-color: #013757;
+}
+
+.pagination-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-size-selector select {
+    border: 1px solid #013757;
+    border-radius: 8px;
+    padding: 0.5rem 2.5rem 0.5rem 1rem;
+    color: #013757;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23013757' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 14px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-width: 80px;
+    transition: all 0.2s ease;
+}
+
+.pagination-size-selector select:focus {
+    border-color: #013757;
+    box-shadow: 0 0 0 0.15rem rgba(1, 55, 87, 0.25);
+    outline: none;
 }
 
 /* ======== MODAIS ======== */

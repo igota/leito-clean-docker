@@ -2,11 +2,14 @@ from flask import Blueprint, jsonify
 import logging
 from ....scheduler.scheduler import scheduler
 from ....database.conexao import get_db_connection
+from ....utils.helpers import login_required, tipo_required
 
 debug_bp = Blueprint('debug', __name__, url_prefix='/api/debug')
 logger = logging.getLogger(__name__)
 
 @debug_bp.route('/agendamentos', methods=['GET'])
+@login_required
+@tipo_required('ADMIN', 'GERENTE')
 def listar_agendamentos():
     """
     Retorna todos os agendamentos ativos no momento
@@ -83,6 +86,8 @@ def listar_agendamentos():
 
 
 @debug_bp.route('/agendamentos/<int:limpeza_id>', methods=['GET'])
+@login_required
+@tipo_required('ADMIN', 'GERENTE')
 def ver_agendamento_limpeza(limpeza_id):
     """
     Ver detalhes de agendamentos de uma limpeza específica

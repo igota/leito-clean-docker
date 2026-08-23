@@ -1,10 +1,13 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, current_app
+from flask import Blueprint, render_template, request, session, redirect, url_for
 import logging
 from ...services.integracao_vitae import login_if_needed
 from ...database.conexao import get_db_connection
 from ...utils.helpers import login_required, tipo_required
-from app.config.settings import redis_client
+from ...config.settings import TEMPOS_SESSAO, SESSION_REDIS, redis_client
+               
+import uuid
 import json
+
 
 # Criar o blueprint
 manager_bp = Blueprint('manager', __name__)
@@ -39,22 +42,20 @@ def index():
                 )
                 usuario = cursor.fetchone()
 
-                from ...config.settings import TEMPOS_SESSAO, SESSION_REDIS
-                from ...events.redis_events import redis_client
-                import uuid
-                import json
+                
 
                 username_upper = username.upper()
+                nome_completo = resultado_login.get("nome_completo", username_upper)
 
                 # ===== DEFINE TIPO E TTL =====
                 if usuario and usuario['status'] == 1:
                     tipo_usuario = usuario['tipo']
 
                     cursor.execute("""
-                        UPDATE usuarios 
-                        SET nome = %s, ultimo_acesso = NOW() 
+                        UPDATE usuarios
+                        SET nome = %s, ultimo_acesso = NOW()
                         WHERE login = %s
-                    """, (resultado_login.get("nome_completo", username_upper), username_upper))
+                    """, (nome_completo, username_upper))
 
                     if tipo_usuario == 'ADMIN':
                         tempo_ttl = TEMPOS_SESSAO['ADMIN']
@@ -63,8 +64,27 @@ def index():
                     else:
                         tempo_ttl = TEMPOS_SESSAO['NAO_CADASTRADO']
 
+                elif usuario:
+                    # Cadastrado em `usuarios`, mas inativo
+                    tipo_usuario = 'INATIVO'
+                    tempo_ttl = TEMPOS_SESSAO['NAO_CADASTRADO']
+
                 else:
-                    tipo_usuario = 'NAO_CADASTRADO'
+                    # Não está em `usuarios` — verifica se é funcionário de enfermagem
+                    cursor.execute("""
+                        SELECT nome, tipo, status
+                        FROM funcionarios
+                        WHERE nome = %s
+                    """, (nome_completo,))
+
+                    funcionario = cursor.fetchone()
+
+                    if funcionario and funcionario['status'] == 1 and funcionario['tipo'].lower() == 'enfermagem':
+                        tipo_usuario = 'ENFERMAGEM'
+                        logging.info(f"Funcionário de enfermagem logado: {username_upper} - Nome: {nome_completo}")
+                    else:
+                        tipo_usuario = 'NAO_CADASTRADO'
+
                     tempo_ttl = TEMPOS_SESSAO['NAO_CADASTRADO']
 
                 logging.info(f"👤 {tipo_usuario} {username_upper} - TTL {tempo_ttl}s")
@@ -76,23 +96,31 @@ def index():
                 sessao_antiga = SESSION_REDIS.get(chave_usuario)
 
                 if sessao_antiga:
-                    SESSION_REDIS.delete(f"sessao:{sessao_antiga}")
-                    logging.info(f"🚫 Sessão antiga derrubada: {sessao_antiga}")
+                    # 🔥 Não apaga a chave da sessão antiga aqui — deixa ela viva até
+                    # expirar sozinha (ou até a aba antiga fazer a próxima requisição).
+                    # Se apagarmos na hora, uma aba SEM conexão SSE ativa (só a
+                    # pagina_principal mantém uma) não recebe o aviso instantâneo de
+                    # logout e, na próxima ação, o controle_sessao() encontra a chave
+                    # simplesmente ausente — reportando "sessão expirada" em vez de
+                    # "login em outro dispositivo". Mantendo a chave viva, o check de
+                    # "sessão substituída" (user_session aponta pra outra) continua
+                    # funcionando e mostra a mensagem correta pra qualquer aba.
+                    logging.info(f"🚫 Sessão antiga substituída: {sessao_antiga}")
 
-                    # 🔥 DISPARA EVENTO SSE
-                # Quando derruba sessão antiga
-                redis_client.publish("logout", json.dumps({
-                    "evento": "logout",  # 👈 Mudar de "tipo" para "evento"
-                    "session_id": sessao_antiga,
-                    "motivo": "Você foi desconectado porque entrou em outro dispositivo."
-                }))
+                    # 🔥 DISPARA EVENTO SSE (para quem tiver a conexão ativa, o aviso
+                    # continua instantâneo)
+                    redis_client.publish("logout", json.dumps({
+                        "evento": "logout",  # 👈 Mudar de "tipo" para "evento"
+                        "session_id": sessao_antiga,
+                        "motivo": "Você foi desconectado porque entrou em outro dispositivo."
+                    }))
 
                 # ===== 🔥 CRIA NOVA SESSÃO =====
                 session_id = str(uuid.uuid4())
 
                 dados_sessao = {
                     "usuario": username_upper,
-                    "nome": resultado_login.get("nome_completo", username_upper),
+                    "nome": nome_completo,
                     "tipo": tipo_usuario
                 }
 
@@ -148,7 +176,7 @@ def index():
 
 @manager_bp.route("/pagina_principal")
 @login_required
-@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO')
+@tipo_required('ADMIN', 'GERENTE', 'ENFERMAGEM', 'NAO_CADASTRADO', 'INATIVO')
 def pagina_principal():
     """Página principal - acesso controlado por tipo"""
     
@@ -250,27 +278,34 @@ def pagina_relatorios():
 
 @manager_bp.route("/relatorios/previa")
 @tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@login_required
 def previa_relatorio():
     return render_template("previaRelatorio.html")
 
 
+@manager_bp.route("/relatorios/dashboard")
+@tipo_required('ADMIN', 'GERENTE')
+@login_required
+def pagina_dashboard_relatorios():
+    return render_template("paginaDashboard.html")
+
+
 @manager_bp.route('/gerenciar_limpezas')
 @tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@login_required
 def gerenciar_limpezas():
     return render_template('paginaCadastroLimpeza.html')
 
 
 @manager_bp.route('/gerenciar_justificativas')
-@tipo_required('ADMIN', 'GERENTE')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'ENFERMAGEM')
+@login_required
 def gerenciar_justificativas():
-    return render_template('paginaJustificativas.html')       
+    return render_template('paginaJustificativas.html')
 
 
 @manager_bp.route("/logout")
-@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO')
+@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO', 'ENFERMAGEM')
 @login_required
 def logout():
     global driver
@@ -280,8 +315,7 @@ def logout():
     
     # 🔥 Remove a sessão do Redis
     if session_id:
-        from ...config.settings import SESSION_REDIS
-        import json
+        
         
         # Remove a sessão
         SESSION_REDIS.delete(f"sessao:{session_id}")

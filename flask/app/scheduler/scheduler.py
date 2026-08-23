@@ -158,7 +158,7 @@ class LimpezaScheduler:
         Carrega APENAS as limpezas MAIS RECENTES de cada leito
         """
         logger.info("📚 Carregando alertas apenas para limpezas mais recentes...")
-        
+
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
@@ -172,49 +172,67 @@ class LimpezaScheduler:
                         WHERE status = 'CONCLUIDA'
                         AND data_validacao IS NOT NULL
                         GROUP BY setor, numero_leito
-                    ) ultima ON rl.setor = ultima.setor 
-                            AND rl.numero_leito = ultima.numero_leito 
+                    ) ultima ON rl.setor = ultima.setor
+                            AND rl.numero_leito = ultima.numero_leito
                             AND rl.data_validacao = ultima.max_data
                     WHERE rl.status = 'CONCLUIDA'
                 """)
-                
+
                 limpezas = cursor.fetchall()
                 total_alertas = 0
-                total_atrasados = 0
-                
+                atrasados = []
+
                 for limpeza in limpezas:
                     limpeza_id = limpeza['id']
                     data_validacao = limpeza['data_validacao']
-                    
+
                     # Calcula quantos dias se passaram
                     dias_desde = (datetime.now() - data_validacao).days
-                    
+
                     # Para cada dia de alerta (5, 6, 7)
                     for dias in [5, 6, 7]:
                         data_alerta = data_validacao + timedelta(days=dias, minutes=1)
-                        
+
                         if dias_desde >= dias:
                             # Já passou do dia do alerta
                             if datetime.now() > data_alerta:
-                                # ⚡ ALERTA ATRASADO! Executa imediatamente
-                                logger.info(f"⚡ Alerta {dias} dias atrasado para limpeza {limpeza_id}")
-                                threading.Thread(
-                                    target=verificar_alerta_dias,
-                                    args=[limpeza_id, dias]
-                                ).start()
-                                total_atrasados += 1
+                                # ⚡ ALERTA ATRASADO! Marca para recuperar em sequência
+                                atrasados.append((limpeza_id, dias))
                         else:
                             # Alerta futuro, agenda normalmente
                             if data_alerta > datetime.now():
                                 self.agendar_alerta(limpeza_id, data_alerta, dias)
                                 total_alertas += 1
-                
-                logger.info(f"✅ {total_alertas} alertas futuros agendados, {total_atrasados} alertas atrasados recuperados")
-                
+
+                if atrasados:
+                    # 🔴 Processa os atrasados em SEQUÊNCIA numa única thread, em vez de
+                    # disparar uma thread por item — evitar rajada de dezenas de conexões
+                    # simultâneas no pool do banco (maxconnections=20) competindo com
+                    # requisições de usuário logo após o boot.
+                    threading.Thread(
+                        target=self._recuperar_atrasados_em_sequencia,
+                        args=[atrasados],
+                        daemon=True
+                    ).start()
+
+                logger.info(f"✅ {total_alertas} alertas futuros agendados, {len(atrasados)} alertas atrasados recuperados")
+
         except Exception as e:
             logger.error(f"❌ Erro ao carregar alertas: {e}")
         finally:
             conn.close()
+
+    def _recuperar_atrasados_em_sequencia(self, atrasados):
+        """
+        Executa os alertas atrasados um de cada vez (mesma thread), para não
+        esgotar o pool de conexões do banco com dezenas de threads simultâneas.
+        """
+        for limpeza_id, dias in atrasados:
+            logger.info(f"⚡ Alerta {dias} dias atrasado para limpeza {limpeza_id}")
+            try:
+                verificar_alerta_dias(limpeza_id, dias)
+            except Exception as e:
+                logger.error(f"❌ Erro ao recuperar alerta atrasado (limpeza {limpeza_id}, {dias} dias): {e}")
     
     def iniciar(self):
         """

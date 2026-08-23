@@ -10,6 +10,74 @@ let tipoFuncionarioBuscandoEdicao = ''; // 'asg' ou 'enf' para o modal de ediç�
 let paginaAtual = 1;
 let itensPorPagina = 10;
 
+// Setores que usam o vocabulário próprio de tipo de limpeza (Programada/Extra)
+function ehCentroCirurgicoSetor(setor) {
+    const s = (setor || "").trim().toUpperCase();
+    return s === "CENTRO CIRURGICO" || s === "CENTRO CIRÚRGICO";
+}
+
+// Preenche o <select> de tipo de limpeza de acordo com o setor escolhido
+function preencherOpcoesTipoLimpeza(selectEl, setor, valorAtual = "") {
+    if (!selectEl) return;
+
+    const opcoes = ehCentroCirurgicoSetor(setor)
+        ? ["Programada", "Extra"]
+        : ["Concorrente", "Alta / Óbito / Transferência", "Longa Permanência"];
+
+    selectEl.innerHTML = '<option value="">Selecione...</option>' +
+        opcoes.map(o => `<option value="${o}">${o}</option>`).join("");
+
+    if (valorAtual && opcoes.includes(valorAtual)) {
+        selectEl.value = valorAtual;
+    }
+}
+
+// Atualiza os labels de "+1 dia / +8 dias" e "15 min / 35 min" conforme o
+// setor escolhido, e recalcula o tempo mínimo se o checkbox já estiver
+// marcado. prefixo = '' para o modal de criação, 'edit' para o de edição.
+function atualizarLabelsPorSetor(setor, prefixo) {
+    const cc = ehCentroCirurgicoSetor(setor);
+
+    const idLabelVencimento = prefixo ? 'editLabelVencimento' : 'labelVencimento';
+    const labelVencimento = document.getElementById(idLabelVencimento);
+    if (labelVencimento) labelVencimento.textContent = cc ? '+1 dia' : '+8 dias';
+
+    const idLabelTempo = prefixo ? 'editLabelTempoMinimo' : 'labelTempoMinimo';
+    const labelTempo = document.getElementById(idLabelTempo);
+    if (labelTempo) labelTempo.textContent = cc ? '15 min' : '35 min';
+
+    const idCheckboxTempo = prefixo ? 'editTempo50min' : 'tempo50min';
+    const checkboxTempo = document.getElementById(idCheckboxTempo);
+    if (checkboxTempo && checkboxTempo.checked) {
+        const idCampoTempo = prefixo ? 'editTempoTotal' : 'tempoTotalText';
+        const minutos = cc ? 15 : 35;
+        const valor = `${String(minutos).padStart(2, '0')}:00`;
+        document.getElementById(idCampoTempo).value = valor;
+
+        // No modal de criação, o checkbox também recalcula a Data Fim a
+        // partir da Data Início — refaz esse cálculo com o novo tempo mínimo.
+        if (!prefixo) {
+            const dataInicioInput = document.getElementById('dataInicio');
+            if (dataInicioInput && dataInicioInput.value) {
+                const dataInicio = new Date(dataInicioInput.value);
+                if (!isNaN(dataInicio.getTime())) {
+                    dataInicio.setMinutes(dataInicio.getMinutes() + minutos);
+                    const ano = dataInicio.getFullYear();
+                    const mes = String(dataInicio.getMonth() + 1).padStart(2, '0');
+                    const dia = String(dataInicio.getDate()).padStart(2, '0');
+                    const horas = String(dataInicio.getHours()).padStart(2, '0');
+                    const minutosFim = String(dataInicio.getMinutes()).padStart(2, '0');
+                    document.getElementById('dataFim').value = `${ano}-${mes}-${dia}T${horas}:${minutosFim}`;
+
+                    if (document.getElementById('dataFimNow').checked) {
+                        document.getElementById('dataFimNow').checked = false;
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ========== FUNÇÕES DE PAGINAÇÃO ==========
 function aplicarPaginacao() {
     const inicio = (paginaAtual - 1) * itensPorPagina;
@@ -363,6 +431,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // Carregar setores e inicializar
     carregarSetores();
     limparPesquisa();
+
+    // Máscara de tempo e cálculo automático da data fim a partir do tempo digitado
+    configurarCamposTempo();
 });
 
 // Evento de redimensionamento
@@ -500,6 +571,48 @@ document.addEventListener("change", function (e) {
 
     if (e.target.id === "modalSetor") {
         atualizarLeitosModal();
+
+        const tipoAtual = document.getElementById("tipoLimpeza").value;
+        preencherOpcoesTipoLimpeza(document.getElementById("tipoLimpeza"), e.target.value, tipoAtual);
+
+        atualizarLabelsPorSetor(e.target.value, '');
+
+        const checkboxVencimento = document.getElementById("calcular8dias");
+        if (checkboxVencimento && checkboxVencimento.checked) {
+            const tipo = document.getElementById("tipoLimpeza").value;
+            const validacao = document.getElementById("dataValidacao").value;
+            const fim = document.getElementById("dataFim").value;
+            const dataRef = validacao || fim;
+
+            if (dataRef && tipo) {
+                const vencimento = calcularVencimentoParaInput(tipo, dataRef, e.target.value);
+                if (vencimento) {
+                    document.getElementById("dataVencimento").value = vencimento;
+                }
+            }
+        }
+    }
+
+    if (e.target.id === "editSetor") {
+        const tipoAtual = document.getElementById("editTipoLimpeza").value;
+        preencherOpcoesTipoLimpeza(document.getElementById("editTipoLimpeza"), e.target.value, tipoAtual);
+
+        atualizarLabelsPorSetor(e.target.value, 'edit');
+
+        const checkboxVencimento = document.getElementById("editCalcular8dias");
+        if (checkboxVencimento && checkboxVencimento.checked) {
+            const tipo = document.getElementById("editTipoLimpeza").value;
+            const validacao = document.getElementById("editDataValidacao")?.value;
+            const fim = document.getElementById("editDataFim")?.value;
+            const dataRef = validacao || fim;
+
+            if (dataRef && tipo) {
+                const vencimento = calcularVencimentoParaInput(tipo, dataRef, e.target.value);
+                if (vencimento) {
+                    document.getElementById("editDataVencimento").value = vencimento;
+                }
+            }
+        }
     }
 });
 
@@ -668,7 +781,11 @@ function limparPesquisa() {
 document.getElementById('modalCadastro').addEventListener('show.bs.modal', function() {
     // Resetar formulário
     document.getElementById('formCadastroLimpeza').reset();
-    
+
+    // Resetar opções do tipo de limpeza (form.reset() não restaura innerHTML alterado via JS)
+    preencherOpcoesTipoLimpeza(document.getElementById('tipoLimpeza'), '');
+    atualizarLabelsPorSetor('', '');
+
     // Esconder alertas
     document.getElementById('alertCadastroLimpeza').style.display = 'none';
     
@@ -759,11 +876,12 @@ document.getElementById('modalCadastro').addEventListener('show.bs.modal', funct
                     return;
                 }
                 
-                const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                const setorAtual = document.getElementById('modalSetor').value;
+                const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                 if (vencimento) {
                     campoVencimento.value = vencimento;
                 } else {
-                    alert('Tipo de limpeza não elegível para vencimento de 8 dias');
+                    alert('Tipo de limpeza não elegível para vencimento');
                     this.checked = false;
                     campoVencimento.disabled = false; // Reativa se der erro
                 }
@@ -789,7 +907,8 @@ document.getElementById('modalCadastro').addEventListener('show.bs.modal', funct
                 const dataRef = validacao || fim;
                 
                 if (dataRef) {
-                    const vencimento = calcularVencimentoParaInput(this.value, dataRef);
+                    const setorAtual = document.getElementById('modalSetor').value;
+                    const vencimento = calcularVencimentoParaInput(this.value, dataRef, setorAtual);
                     if (vencimento) {
                         document.getElementById('dataVencimento').value = vencimento;
                     }
@@ -797,7 +916,7 @@ document.getElementById('modalCadastro').addEventListener('show.bs.modal', funct
             }
         });
     }
-    
+
     // Evento para data validação
     const dataValidacao = document.getElementById('dataValidacao');
     if (dataValidacao) {
@@ -811,7 +930,8 @@ document.getElementById('modalCadastro').addEventListener('show.bs.modal', funct
                 const dataRef = this.value || fim;
                 
                 if (dataRef && tipo) {
-                    const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                    const setorAtual = document.getElementById('modalSetor').value;
+                    const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                     if (vencimento) {
                         document.getElementById('dataVencimento').value = vencimento;
                     }
@@ -819,21 +939,22 @@ document.getElementById('modalCadastro').addEventListener('show.bs.modal', funct
             }
         });
     }
-    
+
     // Evento para data fim
     const dataFim = document.getElementById('dataFim');
     if (dataFim) {
         const novoDataFim = dataFim.cloneNode(true);
         dataFim.parentNode.replaceChild(novoDataFim, dataFim);
-        
+
         novoDataFim.addEventListener('change', function() {
             if (document.getElementById('calcular8dias')?.checked) {
                 const tipo = document.getElementById('tipoLimpeza').value;
                 const validacao = document.getElementById('dataValidacao').value;
                 const dataRef = validacao || this.value;
-                
+
                 if (dataRef && tipo) {
-                    const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                    const setorAtual = document.getElementById('modalSetor').value;
+                    const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                     if (vencimento) {
                         document.getElementById('dataVencimento').value = vencimento;
                     }
@@ -955,11 +1076,54 @@ function validacaoIgualDataFim() {
 
 // Toggle tempo 50 minutos
 function toggleTempo50min() {
-    if (document.getElementById('tempo50min').checked) {
-        document.getElementById('tempoTotalText').value = '50:00';
-        document.getElementById('tempoTotalText').readOnly = true;
+    const tempo50minCheckbox = document.getElementById('tempo50min');
+    const tempoTotalInput = document.getElementById('tempoTotalText');
+    const dataInicioInput = document.getElementById('dataInicio');
+    const dataFimInput = document.getElementById('dataFim');
+
+    if (tempo50minCheckbox.checked) {
+        // Verifica se tem data de início
+        if (!dataInicioInput.value) {
+            alert('⚠️ Para usar o tempo mínimo automático, primeiro selecione uma Data de Início!');
+            tempo50minCheckbox.checked = false;
+            return;
+        }
+
+        const dataInicio = new Date(dataInicioInput.value);
+
+        // Verifica se a data é válida
+        if (isNaN(dataInicio.getTime())) {
+            alert('⚠️ Data de Início inválida!');
+            tempo50minCheckbox.checked = false;
+            return;
+        }
+
+        const setorAtual = document.getElementById('modalSetor').value;
+        const minutos = ehCentroCirurgicoSetor(setorAtual) ? 15 : 35;
+
+        // Calcula data fim = data início + minutos
+        dataInicio.setMinutes(dataInicio.getMinutes() + minutos);
+
+        // Formata para datetime-local (YYYY-MM-DDThh:mm)
+        const ano = dataInicio.getFullYear();
+        const mes = String(dataInicio.getMonth() + 1).padStart(2, '0');
+        const dia = String(dataInicio.getDate()).padStart(2, '0');
+        const horas = String(dataInicio.getHours()).padStart(2, '0');
+        const minutosFim = String(dataInicio.getMinutes()).padStart(2, '0');
+
+        dataFimInput.value = `${ano}-${mes}-${dia}T${horas}:${minutosFim}`;
+        tempoTotalInput.value = `${String(minutos).padStart(2, '0')}:00`;
+        tempoTotalInput.readOnly = true;
+
+        // Se o checkbox "Agora" da data fim estiver marcado, desmarca
+        if (document.getElementById('dataFimNow').checked) {
+            document.getElementById('dataFimNow').checked = false;
+        }
+
     } else {
-        document.getElementById('tempoTotalText').readOnly = false;
+        // Quando desmarca, apenas libera o campo de tempo
+        tempoTotalInput.readOnly = false;
+        // Não limpa a data fim automaticamente
     }
 }
 
@@ -1036,7 +1200,7 @@ function salvarNovaLimpeza(event) {
     else if (document.getElementById('calcular8dias').checked) {
         const dataRef = dataValidacao || dataFim;
         if (dataRef) {
-            vencimento = calcularVencimento(tipo_limpeza, dataRef);
+            vencimento = calcularVencimento(tipo_limpeza, dataRef, setor);
         }
     }
 
@@ -1080,16 +1244,20 @@ function salvarNovaLimpeza(event) {
 }
 
 // Calcular vencimento (para MySQL)
-function calcularVencimento(tipo, dataRefStr) {
-    const tipos8dias = [
+function calcularVencimento(tipo, dataRefStr, setor = null) {
+    const tiposComVencimento = [
         "Alta / Óbito / Transferência",
-        "Longa Permanência"
+        "Longa Permanência",
+        "Programada",
+        "Extra"
     ];
-    
-    if (tipos8dias.includes(tipo) && dataRefStr) {
+
+    if (tiposComVencimento.includes(tipo) && dataRefStr) {
+        const dias = ehCentroCirurgicoSetor(setor) ? 1 : 8;
+
         const data = new Date(dataRefStr);
-        data.setDate(data.getDate() + 8);
-        
+        data.setDate(data.getDate() + dias);
+
         // Formatar para MySQL (YYYY-MM-DD HH:MM:SS)
         const ano = data.getFullYear();
         const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -1097,7 +1265,7 @@ function calcularVencimento(tipo, dataRefStr) {
         const horas = String(data.getHours()).padStart(2, '0');
         const minutos = String(data.getMinutes()).padStart(2, '0');
         const segundos = String(data.getSeconds()).padStart(2, '0');
-        
+
         return `${ano}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
     }
     return null;
@@ -1544,7 +1712,7 @@ function editarLimpeza(id) {
             }
             
             // Tempo
-            document.getElementById('editTempoTotal').value = data.tempo_total_text || '50:00';
+            document.getElementById('editTempoTotal').value = data.tempo_total_text || '35:00';
             
             // Status
             document.getElementById('editStatus').value = data.status || '';
@@ -1569,7 +1737,8 @@ function editarLimpeza(id) {
             document.getElementById('editDataValidacao').readOnly = false;
             
             // Checkbox de tempo
-            if (data.tempo_total_text === '50:00') {
+            const minutoMinimoEsperado = ehCentroCirurgicoSetor(data.setor) ? '15:00' : '35:00';
+            if (data.tempo_total_text === minutoMinimoEsperado) {
                 document.getElementById('editTempo50min').checked = true;
                 document.getElementById('editTempoTotal').readOnly = true;
             } else {
@@ -1611,11 +1780,12 @@ function editarLimpeza(id) {
                             return;
                         }
                         
-                        const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                        const setorAtual = document.getElementById('editSetor').value;
+                        const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                         if (vencimento) {
                             campoVencimento.value = vencimento;
                         } else {
-                            alert('Tipo de limpeza não elegível para vencimento de 8 dias');
+                            alert('Tipo de limpeza não elegível para vencimento');
                             this.checked = false;
                             campoVencimento.disabled = false; // Reativa se der erro
                         }
@@ -1641,7 +1811,8 @@ function editarLimpeza(id) {
                         const dataRef = validacao || fim;
                         
                         if (dataRef) {
-                            const vencimento = calcularVencimentoParaInput(this.value, dataRef);
+                            const setorAtual = document.getElementById('editSetor').value;
+                            const vencimento = calcularVencimentoParaInput(this.value, dataRef, setorAtual);
                             if (vencimento) {
                                 document.getElementById('editDataVencimento').value = vencimento;
                             }
@@ -1649,7 +1820,7 @@ function editarLimpeza(id) {
                     }
                 });
             }
-            
+
             // Configurar evento para data validação
             const editDataValidacao = document.getElementById('editDataValidacao');
             if (editDataValidacao) {
@@ -1663,7 +1834,8 @@ function editarLimpeza(id) {
                         const dataRef = this.value || fim;
                         
                         if (dataRef && tipo) {
-                            const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                            const setorAtual = document.getElementById('editSetor').value;
+                            const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                             if (vencimento) {
                                 document.getElementById('editDataVencimento').value = vencimento;
                             }
@@ -1671,7 +1843,7 @@ function editarLimpeza(id) {
                     }
                 });
             }
-            
+
             // Configurar evento para data fim
             const editDataFim = document.getElementById('editDataFim');
             if (editDataFim) {
@@ -1685,7 +1857,8 @@ function editarLimpeza(id) {
                         const dataRef = validacao || this.value;
                         
                         if (dataRef && tipo) {
-                            const vencimento = calcularVencimentoParaInput(tipo, dataRef);
+                            const setorAtual = document.getElementById('editSetor').value;
+                            const vencimento = calcularVencimentoParaInput(tipo, dataRef, setorAtual);
                             if (vencimento) {
                                 document.getElementById('editDataVencimento').value = vencimento;
                             }
@@ -1761,20 +1934,22 @@ function editarLimpeza(id) {
                 tipoLimpeza = 'Concorrente';
             }
             
-            document.getElementById('editTipoLimpeza').value = tipoLimpeza;
-            
-            // Verificar se o vencimento corresponde a +8 dias (AGORA COM O TIPO JÁ DEFINIDO)
+            preencherOpcoesTipoLimpeza(document.getElementById('editTipoLimpeza'), data.setor, tipoLimpeza);
+            atualizarLabelsPorSetor(data.setor, 'edit');
+
+            // Verificar se o vencimento corresponde ao calculado (AGORA COM O TIPO JÁ DEFINIDO)
             if (data.vencimento) {
-                const tipos8dias = ["Alta / Óbito / Transferência", "Longa Permanência"];
-                
-                if (tipos8dias.includes(tipoLimpeza)) {
+                const tiposComVencimento = ["Alta / Óbito / Transferência", "Longa Permanência", "Programada", "Extra"];
+
+                if (tiposComVencimento.includes(tipoLimpeza)) {
                     const dataRefStr = data.data_validacao || data.data_fim;
-                    
+
                     if (dataRefStr) {
+                        const dias = ehCentroCirurgicoSetor(data.setor) ? 1 : 8;
                         const dataRef = new Date(dataRefStr);
                         const dataVencimentoCalculada = new Date(dataRef);
-                        dataVencimentoCalculada.setDate(dataRef.getDate() + 8);
-                        
+                        dataVencimentoCalculada.setDate(dataRef.getDate() + dias);
+
                         const vencimentoAtual = new Date(data.vencimento);
                         
                         const mesmaData = 
@@ -1875,7 +2050,8 @@ function salvarEdicaoLimpeza(event) {
     else if (document.getElementById('editCalcular8dias').checked) {
         const dataRef = dataValidacao || dataFim;
         if (dataRef) {
-            vencimento = calcularVencimento(tipo_limpeza, dataRef);
+            const setorAtual = document.getElementById('editSetor').value;
+            vencimento = calcularVencimento(tipo_limpeza, dataRef, setorAtual);
         }
     }
     
@@ -2019,7 +2195,9 @@ function mostrarToast(mensagem, tipo = "success") {
 // Toggle tempo 50 minutos no modal de edição
 function toggleTempo50minEdicao() {
     if (document.getElementById('editTempo50min').checked) {
-        document.getElementById('editTempoTotal').value = '50:00';
+        const setorAtual = document.getElementById('editSetor').value;
+        const minutos = ehCentroCirurgicoSetor(setorAtual) ? 15 : 35;
+        document.getElementById('editTempoTotal').value = `${String(minutos).padStart(2, '0')}:00`;
         document.getElementById('editTempoTotal').readOnly = true;
     } else {
         document.getElementById('editTempoTotal').readOnly = false;
@@ -2121,7 +2299,8 @@ document.getElementById('tipoLimpeza')?.addEventListener('change', function() {
         const dataRef = dataValidacao || dataFim;
         
         if (dataRef) {
-            const vencimento = calcularVencimentoParaInput(this.value, dataRef);
+            const setorAtual = document.getElementById('modalSetor').value;
+            const vencimento = calcularVencimentoParaInput(this.value, dataRef, setorAtual);
             if (vencimento) {
                 document.getElementById('dataVencimento').value = vencimento;
             }
@@ -2135,9 +2314,10 @@ document.getElementById('dataValidacao')?.addEventListener('change', function() 
         const tipoLimpeza = document.getElementById('tipoLimpeza').value;
         const dataFim = document.getElementById('dataFim').value;
         const dataRef = this.value || dataFim;
-        
+
         if (dataRef) {
-            const vencimento = calcularVencimentoParaInput(tipoLimpeza, dataRef);
+            const setorAtual = document.getElementById('modalSetor').value;
+            const vencimento = calcularVencimentoParaInput(tipoLimpeza, dataRef, setorAtual);
             if (vencimento) {
                 document.getElementById('dataVencimento').value = vencimento;
             }
@@ -2150,9 +2330,10 @@ document.getElementById('dataFim')?.addEventListener('change', function() {
         const tipoLimpeza = document.getElementById('tipoLimpeza').value;
         const dataValidacao = document.getElementById('dataValidacao').value;
         const dataRef = dataValidacao || this.value;
-        
+
         if (dataRef) {
-            const vencimento = calcularVencimentoParaInput(tipoLimpeza, dataRef);
+            const setorAtual = document.getElementById('modalSetor').value;
+            const vencimento = calcularVencimentoParaInput(tipoLimpeza, dataRef, setorAtual);
             if (vencimento) {
                 document.getElementById('dataVencimento').value = vencimento;
             }
@@ -2167,24 +2348,89 @@ document.getElementById('dataFim')?.addEventListener('change', function() {
 // ============================================
 // FUNÇÃO AUXILIAR PARA CALCULAR VENCIMENTO
 // ============================================
-function calcularVencimentoParaInput(tipo, dataRefStr) {
-    const tipos8dias = [
+function calcularVencimentoParaInput(tipo, dataRefStr, setor = null) {
+    const tiposComVencimento = [
         "Alta / Óbito / Transferência",
-        "Longa Permanência"
+        "Longa Permanência",
+        "Programada",
+        "Extra"
     ];
-    
-    if (tipos8dias.includes(tipo) && dataRefStr) {
+
+    if (tiposComVencimento.includes(tipo) && dataRefStr) {
+        const dias = ehCentroCirurgicoSetor(setor) ? 1 : 8;
+
         const data = new Date(dataRefStr);
-        data.setDate(data.getDate() + 8);
-        
+        data.setDate(data.getDate() + dias);
+
         const ano = data.getFullYear();
         const mes = String(data.getMonth() + 1).padStart(2, '0');
         const dia = String(data.getDate()).padStart(2, '0');
         const horas = String(data.getHours()).padStart(2, '0');
         const minutos = String(data.getMinutes()).padStart(2, '0');
-        
+
         return `${ano}-${mes}-${dia}T${horas}:${minutos}`;
     }
     return null;
+}
+
+// ================================
+// MÁSCARA DE TEMPO E CÁLCULO AUTOMÁTICO DA DATA FIM A PARTIR DO TEMPO DIGITADO
+// ================================
+
+// Aplica máscara MM:SS enquanto o usuário digita (só dígitos, insere ":" após os 2 primeiros)
+function aplicarMascaraTempo(inputEl) {
+    if (!inputEl) return;
+
+    inputEl.setAttribute('maxlength', '5');
+    inputEl.addEventListener('input', function() {
+        const digitos = this.value.replace(/\D/g, '').slice(0, 4);
+        this.value = digitos.length > 2
+            ? `${digitos.slice(0, 2)}:${digitos.slice(2)}`
+            : digitos;
+    });
+}
+
+// Calcula data fim = data início + tempo digitado (MM:SS) e sobrescreve o campo de data fim
+function calcularDataFimPorTempoDigitado(tempoInputId, dataInicioInputId, dataFimInputId) {
+    const tempoInput = document.getElementById(tempoInputId);
+    const dataInicioInput = document.getElementById(dataInicioInputId);
+    const dataFimInput = document.getElementById(dataFimInputId);
+    if (!tempoInput || tempoInput.readOnly || !dataInicioInput || !dataFimInput) return;
+
+    const match = /^(\d{1,2}):([0-5]\d)$/.exec(tempoInput.value.trim());
+    if (!match) return;
+
+    if (!dataInicioInput.value) return;
+
+    const dataInicio = new Date(dataInicioInput.value);
+    if (isNaN(dataInicio.getTime())) return;
+
+    const minutos = parseInt(match[1], 10);
+    const segundos = parseInt(match[2], 10);
+    dataInicio.setSeconds(dataInicio.getSeconds() + minutos * 60 + segundos);
+
+    const ano = dataInicio.getFullYear();
+    const mes = String(dataInicio.getMonth() + 1).padStart(2, '0');
+    const dia = String(dataInicio.getDate()).padStart(2, '0');
+    const h = String(dataInicio.getHours()).padStart(2, '0');
+    const m = String(dataInicio.getMinutes()).padStart(2, '0');
+
+    dataFimInput.value = `${ano}-${mes}-${dia}T${h}:${m}`;
+}
+
+// Liga a máscara e o recálculo automático nos dois campos de Tempo (cadastro e edição)
+function configurarCamposTempo() {
+    const tempoTotalText = document.getElementById('tempoTotalText');
+    const editTempoTotal = document.getElementById('editTempoTotal');
+
+    aplicarMascaraTempo(tempoTotalText);
+    aplicarMascaraTempo(editTempoTotal);
+
+    tempoTotalText?.addEventListener('change', function() {
+        calcularDataFimPorTempoDigitado('tempoTotalText', 'dataInicio', 'dataFim');
+    });
+    editTempoTotal?.addEventListener('change', function() {
+        calcularDataFimPorTempoDigitado('editTempoTotal', 'editDataInicio', 'editDataFim');
+    });
 }
 

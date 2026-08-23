@@ -88,7 +88,80 @@
         <div class="popup-conteudo">
             <div class="popup-icone" id="popupIcone">⚠️</div>
             <p id="mensagemTexto"></p>
+            <button id="btnIntervaloAlmocoJanta" class="oculto">Intervalo Almoço / Janta</button>
             <button id="fecharMensagemBtn">OK</button>
+        </div>
+    </div>
+
+    <!-- Popup Leitor de Cartão do ASG (Intervalo Almoço/Janta) -->
+    <div id="popupLeitorIntervalo" class="popup oculto">
+        <div class="popup-conteudo">
+            <span class="fechar-popup" id="fecharLeitorIntervalo">✖</span>
+
+            <!-- Imagem/ícone do leitor sendo bipado -->
+            <div class="leitor-imagem">
+                <div class="leitor-retangulo">
+                    <div class="led-vermelho"></div>
+                    <div class="leitor-texto">LEITOR</div>
+                </div>
+                <div class="onda-radio"></div>
+                <div class="cartao-bipando">🪪</div>
+            </div>
+
+            <h3>Intervalo Almoço/Janta</h3>
+            <p class="mensagem-leitor">Aproxime o cartão do ASG que iniciou a limpeza</p>
+
+            <!-- Input oculto visualmente -->
+            <input
+                id="idcartaoIntervaloOculto"
+                type="text"
+                class="input-oculto"
+                maxlength="10"
+                minlength="9"
+                pattern="^\d{9,10}$"
+                inputmode="none"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+            />
+        </div>
+    </div>
+
+    <!-- Popup Leitor de Cartão do ASG (finalizar) -->
+    <div id="popupLeitorASGFinalizar" class="popup oculto">
+        <div class="popup-conteudo">
+            <span class="fechar-popup" id="fecharLeitorASGFinalizar">✖</span>
+
+            <!-- Imagem/ícone do leitor sendo bipado -->
+            <div class="leitor-imagem">
+                <div class="leitor-retangulo">
+                    <div class="led-vermelho"></div>
+                    <div class="leitor-texto">LEITOR</div>
+                </div>
+                <div class="onda-radio"></div>
+                <div class="cartao-bipando">🪪</div>
+            </div>
+
+            <h3>ASG</h3>
+            <p class="mensagem-leitor">Aproxime o cartão do leitor para finalizar</p>
+
+            <!-- Input oculto visualmente -->
+            <input
+                id="idcartaoASGFinalizarOculto"
+                type="text"
+                class="input-oculto"
+                maxlength="10"
+                minlength="9"
+                pattern="^\d{9,10}$"
+                inputmode="none"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+            />
         </div>
     </div>
 

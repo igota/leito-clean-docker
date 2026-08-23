@@ -1,13 +1,12 @@
 import logging
-from venv import logger
+logger = logging.getLogger(__name__)
 
 from flask import Blueprint, request, jsonify, session
 import pymysql
 from ....database.conexao import get_db_connection
 from ....utils.helpers import login_required, tipo_required
 from ....config.settings import atualizacao_evento
-from ....scheduler.scheduler import agendar_nova_limpeza, agendar_alertas_limpeza, cancelar_alertas_limpeza_antiga
-from ....events.redis_events import publicar_evento  
+from ....events.redis_events import publicar_evento
 import traceback
 from datetime import datetime
 
@@ -68,13 +67,18 @@ def pesquisar_limpezas():
                     rl.tempo_total_text,
                     rl.modo_registro,
                     rl.status,
-                    asg.nome as funcionario_asg,
+                    CASE
+                        WHEN rl.asg_intervalo IS NOT NULL AND rl.asg_intervalo != rl.funcionario_asg_id
+                        THEN CONCAT(asg.nome, ' / ', asg_int.nome)
+                        ELSE asg.nome
+                    END as funcionario_asg,
                     enf.nome as funcionario_enf,
                     tec.nome as funcionario_tec
                 FROM registro_limpeza rl
-                LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
-                LEFT JOIN funcionarios tec ON rl.id_cartao_tec = tec.id_cartao
+                LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
+                LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
+                LEFT JOIN funcionarios tec ON rl.funcionario_tec_id = tec.id
                 WHERE 1=1
             """
             params = []
@@ -148,11 +152,39 @@ def nova_limpeza_manual():
             """, (setor,))
             
             resultado = cursor.fetchone()
-            
+
             if not resultado:
                 return jsonify({"success": False, "error": "Setor não encontrado ou sem dispositivo ativo"})
 
             ip_dispositivo = resultado['ip']
+
+            # Buscar funcionario_asg_id baseado no cartão
+            funcionario_asg_id = None
+            if id_cartao_asg:
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_asg,))
+                result = cursor.fetchone()
+                if result:
+                    funcionario_asg_id = result['id']
+                else:
+                    logger.warning(f"ASG com cartão {id_cartao_asg} não encontrado ou inativo")
+
+            # Buscar funcionario_enf_id baseado no cartão
+            funcionario_enf_id = None
+            if id_cartao_enf:
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_enf,))
+                result = cursor.fetchone()
+                if result:
+                    funcionario_enf_id = result['id']
+                else:
+                    logger.warning(f"Enfermeiro com cartão {id_cartao_enf} não encontrado ou inativo")
 
         # ===== FUNÇÃO PARSE ISO CORRIGIDA =====
         def parse_iso(data_str):
@@ -196,25 +228,22 @@ def nova_limpeza_manual():
         data_validacao_dt = parse_iso(data_validacao)
         vencimento_dt = parse_iso(vencimento)
 
-        # 👇 ANTES DE INSERIR A NOVA, CANCELA OS TIMERS DA LIMPEZA ANTIGA
-        limpeza_antiga_id = encontrar_limpeza_antiga(setor, leito)
-        
-        if limpeza_antiga_id:
-            logger.info(f"🔄 Encontrada limpeza antiga {limpeza_antiga_id} para cancelar")
-            cancelar_alertas_limpeza_antiga(limpeza_antiga_id)
-
         # Inserir limpeza
         with conn.cursor() as cursor:
             sql = """
                 INSERT INTO registro_limpeza (
-                    id_cartao_asg, id_cartao_enf, numero_leito, setor, paciente,
+                    id_cartao_asg, funcionario_asg_id,
+                    id_cartao_enf, funcionario_enf_id,
+                    numero_leito, setor, paciente,
                     tipo_limpeza, data_inicio, data_fim, data_validacao, vencimento,
                     tempo_total_text, ip_dispositivo, status, modo_registro
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'MANUAL')
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'MANUAL')
             """
-            
+
             params = (
-                id_cartao_asg, id_cartao_enf, leito, setor, paciente,
+                id_cartao_asg, funcionario_asg_id,
+                id_cartao_enf, funcionario_enf_id,
+                leito, setor, paciente,
                 tipo_limpeza, data_inicio_dt, data_fim_dt, data_validacao_dt, vencimento_dt,
                 tempo_total_text, ip_dispositivo, status
             )
@@ -222,15 +251,6 @@ def nova_limpeza_manual():
             cursor.execute(sql, params)
             limpeza_id = cursor.lastrowid
 
-            # 👇 AGENDAR TIMERS PARA A NOVA LIMPEZA
-            if vencimento_dt:
-                agendar_nova_limpeza(limpeza_id, vencimento_dt)
-                logger.info(f"📅 Limpeza manual {limpeza_id} agendada para vencimento em {vencimento_dt}")
-            
-            if data_validacao_dt:
-                agendar_alertas_limpeza(limpeza_id, data_validacao_dt)
-                logger.info(f"📅 Alertas 5/6/7 dias agendados para limpeza {limpeza_id}")
-            
             # ===== EVENTOS =====
            
             atualizacao_evento.set()
@@ -246,17 +266,7 @@ def nova_limpeza_manual():
                 'vencimento': vencimento_dt.isoformat() if vencimento_dt else None,
                 'timestamp': datetime.now().isoformat()
             })
-            
-            # Se cancelou uma limpeza antiga, publicar evento também
-            if limpeza_antiga_id:
-                publicar_evento('limpeza_antiga_cancelada', {
-                    'id_antiga': limpeza_antiga_id,
-                    'id_nova': limpeza_id,
-                    'setor': setor,
-                    'leito': leito,
-                    'timestamp': datetime.now().isoformat()
-                })
-            
+
             conn.commit()
             
             return jsonify({
@@ -299,8 +309,8 @@ def get_limpeza(id):
                     asg.nome as nome_asg,
                     enf.nome as nome_enf
                 FROM registro_limpeza rl
-                LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
+                LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
                 WHERE rl.id = %s
             """, (id,))
             
@@ -418,10 +428,34 @@ def atualizar_limpeza():
                     'data_validacao': original['data_validacao'].isoformat() if original['data_validacao'] else None
                 }
             
-            # ===== PASSO 1: CANCELA TIMERS ATUAIS =====
-            logger.info(f"🔄 Cancelando timers atuais da limpeza {id} antes de atualizar")
-            cancelar_alertas_limpeza_antiga(id)
-            
+            # Buscar funcionario_asg_id baseado no cartão (se o cartão foi alterado)
+            funcionario_asg_id = None
+            if id_cartao_asg:
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_asg,))
+                result = cursor.fetchone()
+                if result:
+                    funcionario_asg_id = result['id']
+                else:
+                    logger.warning(f"ASG com cartão {id_cartao_asg} não encontrado ou inativo")
+
+            # Buscar funcionario_enf_id baseado no cartão (se o cartão foi alterado)
+            funcionario_enf_id = None
+            if id_cartao_enf:
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_enf,))
+                result = cursor.fetchone()
+                if result:
+                    funcionario_enf_id = result['id']
+                else:
+                    logger.warning(f"Enfermeiro com cartão {id_cartao_enf} não encontrado ou inativo")
+
             # ===== PASSO 2: ATUALIZA O BANCO (RESETA DIAS_ALERTA) =====
             cursor.execute("""
                 UPDATE registro_limpeza
@@ -430,20 +464,24 @@ def atualizar_limpeza():
                     tipo_limpeza = %s,
                     status = %s,
                     id_cartao_asg = %s,
+                    funcionario_asg_id = %s,
                     id_cartao_enf = %s,
+                    funcionario_enf_id = %s,
                     paciente = %s,
                     data_inicio = %s,
                     data_fim = %s,
                     data_validacao = %s,
-                    vencimento = %s,  
+                    vencimento = %s,
                     tempo_total_text = %s,
                     dias_alerta = NULL
                 WHERE id = %s
             """, (
-                setor, leito, tipo_limpeza, status, 
-                id_cartao_asg, id_cartao_enf, paciente,
+                setor, leito, tipo_limpeza, status,
+                id_cartao_asg, funcionario_asg_id,
+                id_cartao_enf, funcionario_enf_id,
+                paciente,
                 data_inicio_dt, data_fim_dt, data_validacao_dt,
-                vencimento_dt,  
+                vencimento_dt,
                 tempo_total_text, id
             ))
             
@@ -475,28 +513,10 @@ def atualizar_limpeza():
             
             logger.info(f"🔍 Status atual: {status_atual}, Tem mais recente: {tem_mais_recente}")
             
-            # ===== PASSO 4: SÓ REAGENDA SE FOR CONCLUIDA E MAIS RECENTE =====
+            # Vencimento/dias_alerta são recalculados pela verificação periódica
+            # (services/atualiza_pendentes.py) com base no estado atual do banco,
+            # não há mais timers para (re)agendar aqui.
             reagendou = False
-            if status_atual == 'CONCLUIDA' and not tem_mais_recente:
-                timers_agendados = 0
-                
-                if vencimento_dt:
-                    agendar_nova_limpeza(id, vencimento_dt)
-                    logger.info(f"📅 Limpeza {id} reagendada para vencimento (é a mais recente)")
-                    timers_agendados += 1
-                    reagendou = True
-                
-                if data_validacao_dt:
-                    agendar_alertas_limpeza(id, data_validacao_dt)
-                    logger.info(f"📅 Alertas 5/6/7 dias reagendados para limpeza {id} (é a mais recente)")
-                    timers_agendados += 3
-                    reagendou = True
-                
-                logger.info(f"✅ Total de {timers_agendados} timers reagendados")
-            elif status_atual == 'CONCLUIDA' and tem_mais_recente:
-                logger.info(f"⏭️ Limpeza {id} CONCLUIDA mas NÃO é mais a recente - não reagendando")
-            else:
-                logger.info(f"⏭️ Limpeza {id} com status '{status_atual}' - não reagendando timers")
             
             
             
@@ -541,8 +561,8 @@ def atualizar_limpeza():
 
 
 @limpezas_bp.route('/api/listar_limpezas', methods=['GET'])
-@tipo_required('ADMIN', 'GERENTE','NAO_CADASTRADO','INATIVO')
-@login_required 
+@tipo_required('ADMIN', 'GERENTE', 'NAO_CADASTRADO', 'INATIVO', 'ENFERMAGEM')
+@login_required
 def listar_limpezas():
     
     # 🔥 FORÇA HEADERS ANTI-CACHE
@@ -564,34 +584,39 @@ def listar_limpezas():
                         rl.numero_leito, 
                         rl.setor, 
                         rl.paciente, 
-                        rl.status, 
+                        rl.status,
                         rl.tipo_limpeza,
-                        asg.nome as funcionario_asg,
+                        CASE
+                            WHEN rl.asg_intervalo IS NOT NULL AND rl.asg_intervalo != rl.funcionario_asg_id
+                            THEN CONCAT(asg.nome, ' / ', asg_int.nome)
+                            ELSE asg.nome
+                        END as funcionario_asg,
                         enf.nome as funcionario_enf,
-                        rl.tempo_total_text, 
-                        rl.data_validacao, 
+                        rl.tempo_total_text,
+                        rl.data_validacao,
                         rl.dias_alerta,
-                        CASE 
-                            WHEN j.id IS NOT NULL AND j.data_criacao > rl.data_inicio THEN TRUE 
-                            ELSE FALSE 
+                        CASE
+                            WHEN j.id IS NOT NULL AND j.data_criacao > rl.data_inicio THEN TRUE
+                            ELSE FALSE
                         END as tem_justificativa
                     FROM registro_limpeza rl
                     -- 🔥 JOIN com setores para filtrar apenas ativos
                     INNER JOIN setores s ON rl.setor = s.nome AND s.status = TRUE
-                    LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                    LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
+                    LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                    LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
+                    LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
                     -- 🔥 Subquery para pegar a última justificativa de cada leito
                     LEFT JOIN (
-                        SELECT j1.* 
+                        SELECT j1.*
                         FROM justificativas j1
                         INNER JOIN (
                             SELECT setor, leito, MAX(data_atualizacao) as max_data
                             FROM justificativas
                             GROUP BY setor, leito
-                        ) j2 ON j1.setor = j2.setor 
-                            AND j1.leito = j2.leito 
+                        ) j2 ON j1.setor = j2.setor
+                            AND j1.leito = j2.leito
                             AND j1.data_atualizacao = j2.max_data
-                    ) j ON rl.setor = j.setor COLLATE utf8mb4_0900_ai_ci 
+                    ) j ON rl.setor = j.setor COLLATE utf8mb4_0900_ai_ci
                         AND rl.numero_leito = j.leito COLLATE utf8mb4_0900_ai_ci
                     -- 🔥 CORREÇÃO: Pegar o registro MAIS RECENTE baseado na DATA DE INÍCIO
                     WHERE (rl.setor, rl.numero_leito, rl.data_inicio) IN (
@@ -609,34 +634,39 @@ def listar_limpezas():
                         rl.numero_leito, 
                         rl.setor, 
                         rl.paciente, 
-                        rl.status, 
+                        rl.status,
                         rl.tipo_limpeza,
-                        asg.nome as funcionario_asg,
+                        CASE
+                            WHEN rl.asg_intervalo IS NOT NULL AND rl.asg_intervalo != rl.funcionario_asg_id
+                            THEN CONCAT(asg.nome, ' / ', asg_int.nome)
+                            ELSE asg.nome
+                        END as funcionario_asg,
                         enf.nome as funcionario_enf,
                         rl.tempo_total_text,
-                        rl.data_validacao, 
+                        rl.data_validacao,
                         rl.dias_alerta,
-                        CASE 
-                            WHEN j.id IS NOT NULL AND j.data_criacao > rl.data_inicio THEN TRUE 
-                            ELSE FALSE 
+                        CASE
+                            WHEN j.id IS NOT NULL AND j.data_criacao > rl.data_inicio THEN TRUE
+                            ELSE FALSE
                         END as tem_justificativa
                     FROM registro_limpeza rl
                     -- 🔥 JOIN com setores para filtrar apenas ativos
                     INNER JOIN setores s ON rl.setor = s.nome AND s.status = TRUE
-                    LEFT JOIN funcionarios asg ON rl.id_cartao_asg = asg.id_cartao
-                    LEFT JOIN funcionarios enf ON rl.id_cartao_enf = enf.id_cartao
+                    LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
+                    LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
+                    LEFT JOIN funcionarios enf ON rl.funcionario_enf_id = enf.id
                     -- 🔥 Subquery para pegar a última justificativa de cada leito
                     LEFT JOIN (
-                        SELECT j1.* 
+                        SELECT j1.*
                         FROM justificativas j1
                         INNER JOIN (
                             SELECT setor, leito, MAX(data_atualizacao) as max_data
                             FROM justificativas
                             GROUP BY setor, leito
-                        ) j2 ON j1.setor = j2.setor 
-                            AND j1.leito = j2.leito 
+                        ) j2 ON j1.setor = j2.setor
+                            AND j1.leito = j2.leito
                             AND j1.data_atualizacao = j2.max_data
-                    ) j ON rl.setor = j.setor COLLATE utf8mb4_0900_ai_ci 
+                    ) j ON rl.setor = j.setor COLLATE utf8mb4_0900_ai_ci
                         AND rl.numero_leito = j.leito COLLATE utf8mb4_0900_ai_ci
                     -- 🔥 CORREÇÃO: Pegar o registro MAIS RECENTE baseado na DATA DE INÍCIO
                     WHERE (rl.setor, rl.numero_leito, rl.data_inicio) IN (

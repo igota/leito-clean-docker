@@ -39,7 +39,7 @@
     </a>
     {% endif %}
     
-    {% if tipo_usuario == 'ADMIN' or tipo_usuario == 'GERENTE' %}    
+    {% if tipo_usuario == 'ADMIN' or tipo_usuario == 'GERENTE' or tipo_usuario == 'ENFERMAGEM' %}
     <a href="{{ url_for('manager.gerenciar_justificativas') }}">
         <i class="bi bi-chat-left-text-fill"></i>
         <span class="menu-text">Justificativas</span>
@@ -53,16 +53,7 @@
     </a>
     {% endif %}
 
-    <!-- 🔥 CRONÔMETRO DE SESSÃO -->
-    <div class="session-timer-section">
-        <div class="timer-icon">
-            <i class="fas fa-hourglass-half"></i>
-        </div>
-        <div class="timer-info">
-            <span class="timer-label">Tempo restante</span>
-            <span class="timer-value" id="sessionTimer">--:--:--</span>
-        </div>
-    </div>
+
 
     <!-- Área do usuário no rodapé do menu lateral -->
     <div class="menu-user-section">
@@ -115,6 +106,16 @@
             {% endfor %}
         {% endif %}
         {% endwith %}
+
+        <!-- 🔥 Mensagem Toast da Sessão (para exibir erros de permissão) -->
+        {% if session.get('toast_message') %}
+        <div class="alert alert-{{ session.toast_message.tipo }} alert-dismissible fade show mt-3" role="alert">
+            {{ session.toast_message.texto }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {# Remove a mensagem após exibir para não aparecer novamente #}
+        {% set _ = session.pop('toast_message', None) %}
+        {% endif %}
 
         {% block content %}{% endblock %}
     </div>

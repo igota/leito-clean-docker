@@ -1,6 +1,4 @@
-from venv import logger
-
-from flask import Blueprint, request, jsonify  # 👈 MUDAR para Blueprint
+from flask import Blueprint, request, jsonify  
 from datetime import datetime, timedelta
 import os
 import json
@@ -8,14 +6,22 @@ import logging
 from ....config.settings import LEITOS_CACHE_FILE, atualizacao_evento
 from ....database.conexao import get_db_connection
 from ....utils.helpers import get_client_ip
-from ....scheduler.scheduler import agendar_nova_limpeza, agendar_alertas_limpeza, cancelar_alertas_limpeza_antiga
-from ....events.redis_events import publicar_evento 
+from ....events.redis_events import publicar_evento
 
 # 👇 CRIAR O BLUEPRINT
 mobile_api_bp = Blueprint('mobile_api', __name__)
 
 
 # ==================== FUNÇÕES AUXILIARES ====================
+
+@mobile_api_bp.route("/teste-ip")
+def teste_ip():
+
+    print("REMOTE_ADDR:", request.remote_addr)
+    print("X_REAL_IP:", request.headers.get("X-Real-IP"))
+    print("X_FORWARDED_FOR:", request.headers.get("X-Forwarded-For"))
+
+    return "ok"
 
 def encontrar_limpeza_antiga(setor, numero_leito):
     """Busca o ID da limpeza mais recente antes da nova (que será substituída)"""
@@ -48,32 +54,44 @@ def carregar_leitos():
     try:
         ip = get_client_ip()
 
-        # Abre o JSON gerado pela thread
-        with open(LEITOS_CACHE_FILE, "r", encoding="utf-8") as f:
-            cache = json.load(f)
+        # 🔹 Setores CONFIGURADOS para este IP (fonte de verdade: banco de dados).
+        # Não deriva mais dos dados capturados de pacientes, pois setores sem
+        # nenhum paciente no momento (ex.: Centro Cirúrgico quando só há RPA
+        # GERAL/SPA GERAL, que são descartados na captura) ficariam de fora.
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT s.nome
+                    FROM setores s
+                    JOIN dispositivos d ON s.id_dispositivo = d.id
+                    WHERE d.ip = %s AND d.status = TRUE AND s.status = TRUE
+                    ORDER BY s.nome
+                """, (ip,))
+                setores = [row["nome"] for row in cursor.fetchall()]
+        finally:
+            conn.close()
 
-        if ip not in cache:
+        if not setores:
             return jsonify({
                 "status": "erro",
-                "mensagem": f"Nenhum dado disponível para o IP {ip}"
+                "mensagem": f"Nenhum setor configurado para o IP {ip}"
             }), 404
 
-        dados_ip = cache[ip]["leitos"]
-
-        # Extrai setores únicos
-        setores = sorted({item["setor"] for item in dados_ip})
+        # 🔹 Abre o JSON gerado pela thread apenas para obter o horário da última atualização
+        ultima_atualizacao = None
+        try:
+            with open(LEITOS_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            ultima_atualizacao = cache.get(ip, {}).get("ultima_atualizacao")
+        except FileNotFoundError:
+            pass
 
         return jsonify({
             "status": "ok",
             "setores": setores,
-            "ultima_atualizacao": cache[ip]["ultima_atualizacao"]
+            "ultima_atualizacao": ultima_atualizacao
         })
-
-    except FileNotFoundError:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Cache ainda não foi gerado"
-        }), 503
 
     except Exception as e:
         logging.error(f"Erro em /carregar_leitos: {e}")
@@ -93,17 +111,23 @@ def limpeza_ativa_por_ip():
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     r.id,
                     r.setor,
                     r.numero_leito,
                     r.tipo_limpeza,
                     r.data_inicio,
                     r.status,
-                    f.nome as funcionario_asg,
+                    r.intervalo_liberado,
+                    CASE
+                        WHEN r.asg_intervalo IS NOT NULL AND r.asg_intervalo != r.funcionario_asg_id
+                        THEN CONCAT(f.nome, ' / ', f_int.nome)
+                        ELSE f.nome
+                    END as funcionario_asg,
                     TIMESTAMPDIFF(SECOND, r.data_inicio, NOW()) AS segundos_decorridos
                 FROM registro_limpeza r
-                LEFT JOIN funcionarios f ON r.id_cartao_asg = f.id_cartao
+                LEFT JOIN funcionarios f ON r.funcionario_asg_id = f.id
+                LEFT JOIN funcionarios f_int ON r.asg_intervalo = f_int.id
                 WHERE r.ip_dispositivo = %s
                   AND r.status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
                 ORDER BY r.data_inicio ASC
@@ -441,61 +465,93 @@ def verificar_funcionarios():
 def limpeza_aguardando_validacao():
     dados = request.json
     id_limpeza = dados.get("id_limpeza")
+    id_cartao_asg = dados.get("id_cartao_asg")
 
     if not id_limpeza:
         return jsonify({"erro": "ID da limpeza obrigatório"}), 400
 
+    if not id_cartao_asg:
+        return jsonify({"erro": "Cartão do ASG obrigatório"}), 400
+
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Buscar dados da limpeza (incluindo setor e leito para o evento)
+            # Busca a limpeza para verificar o tempo e o ASG responsável
             cursor.execute("""
-                SELECT data_inicio, status, setor, numero_leito
+                SELECT data_inicio, status, setor, numero_leito, funcionario_asg_id, intervalo_liberado
                 FROM registro_limpeza
                 WHERE id = %s
             """, (id_limpeza,))
-            
+
             limpeza = cursor.fetchone()
-            
+
             if not limpeza:
                 return jsonify({"erro": "Limpeza não encontrada"}), 404
-                
+
             if limpeza["status"] != "EM_ANDAMENTO":
                 return jsonify({"erro": "Limpeza não está em andamento"}), 400
-            
+
             setor = limpeza["setor"]
             leito = limpeza["numero_leito"]
+
+            # 🔒 Apenas o ASG que iniciou a limpeza pode finalizá-la
+            # (a menos que o Intervalo Almoço/Janta tenha sido liberado para este registro)
+            cursor.execute("""
+                SELECT id FROM funcionarios
+                WHERE id_cartao = %s AND status = 1
+                LIMIT 1
+            """, (id_cartao_asg,))
+
+            funcionario_asg = cursor.fetchone()
+
+            if not funcionario_asg:
+                return jsonify({"erro": "Funcionário ASG não encontrado ou inativo"}), 400
+
+            if not limpeza["intervalo_liberado"] and funcionario_asg["id"] != limpeza["funcionario_asg_id"]:
+                return jsonify({
+                    "erro": "ASG_INVALIDO",
+                    "mensagem": "Apenas o ASG que iniciou a limpeza pode finalizá-la."
+                }), 403
+
+            # ⏱️ Verifica se já passou o tempo mínimo (15 min para Centro Cirúrgico, 35 min para os demais)
             data_inicio = limpeza["data_inicio"]
             agora = datetime.now()
             minutos_decorridos = (agora - data_inicio).total_seconds() / 60
-            
-            if minutos_decorridos < 1:
-                minutos_faltantes = round(1 - minutos_decorridos, 1)
+
+            setor_norm = (setor or "").strip().upper()
+            eh_centro_cirurgico = "CENTRO CIRURGICO" in setor_norm or "CENTRO CIRÚRGICO" in setor_norm
+            tempo_minimo = 15 if eh_centro_cirurgico else 35
+
+            if minutos_decorridos < tempo_minimo:
+                minutos_faltantes = round(tempo_minimo - minutos_decorridos, 1)
                 return jsonify({
                     "erro": "TEMPO_MINIMO_NAO_ATINGIDO",
-                    "mensagem": f"Tempo mínimo de 1 minutos não atingido. Aguarde mais {minutos_faltantes} minutos.",
+                    "mensagem": f"Tempo mínimo: {tempo_minimo} minutos",
+                    "tempo_minimo": tempo_minimo,
                     "minutos_decorridos": round(minutos_decorridos, 1),
                     "minutos_faltantes": minutos_faltantes
                 }), 400
 
+            # Se passou da validação, prossegue com a atualização
+            # (id_cartao_intervalo/asg_intervalo registram quem efetivamente finalizou,
+            # que pode ser diferente de funcionario_asg_id quando o Intervalo foi liberado)
             cursor.execute("""
                 UPDATE registro_limpeza
                 SET status = 'AGUARDANDO_VALIDACAO',
-                    data_fim = NOW()
+                    data_fim = NOW(),
+                    id_cartao_intervalo = %s,
+                    asg_intervalo = %s
                 WHERE id = %s
                   AND status = 'EM_ANDAMENTO'
-            """, (id_limpeza,))
+            """, (id_cartao_asg, funcionario_asg["id"], id_limpeza))
 
             if cursor.rowcount == 0:
                 return jsonify({"erro": "Limpeza não encontrada ou status inválido"}), 404
 
         conn.commit()
-        
-        
+
         atualizacao_evento.set()
-        
-       
-        
+
         publicar_evento('limpeza_aguardando_validacao', {
             'id': id_limpeza,
             'setor': setor,
@@ -503,7 +559,7 @@ def limpeza_aguardando_validacao():
             'minutos_decorridos': round(minutos_decorridos, 1),
             'timestamp': datetime.now().isoformat()
         })
-        
+
         return jsonify({
             "mensagem": "Limpeza finalizada (aguardando validação)",
             "minutos_decorridos": round(minutos_decorridos, 1)
@@ -514,6 +570,75 @@ def limpeza_aguardando_validacao():
         print(f"❌ ERRO em limpeza_aguardando_validacao: {e}")
         import traceback
         traceback.print_exc()
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@mobile_api_bp.route("/api/limpeza/ativar_intervalo", methods=["POST"])
+def ativar_intervalo_limpeza():
+    dados = request.json
+    id_limpeza = dados.get("id_limpeza")
+    id_cartao_asg = dados.get("id_cartao_asg")
+
+    if not id_limpeza:
+        return jsonify({"erro": "ID da limpeza obrigatório"}), 400
+
+    if not id_cartao_asg:
+        return jsonify({"erro": "Cartão do ASG obrigatório"}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT status, funcionario_asg_id
+                FROM registro_limpeza
+                WHERE id = %s
+            """, (id_limpeza,))
+
+            limpeza = cursor.fetchone()
+
+            if not limpeza:
+                return jsonify({"erro": "Limpeza não encontrada"}), 404
+
+            if limpeza["status"] != "EM_ANDAMENTO":
+                return jsonify({"erro": "Limpeza não está em andamento"}), 400
+
+            # 🔒 Apenas o ASG que iniciou a limpeza pode ativar o Intervalo
+            cursor.execute("""
+                SELECT id FROM funcionarios
+                WHERE id_cartao = %s AND status = 1
+                LIMIT 1
+            """, (id_cartao_asg,))
+
+            funcionario_asg = cursor.fetchone()
+
+            if not funcionario_asg:
+                return jsonify({"erro": "Funcionário ASG não encontrado ou inativo"}), 400
+
+            if funcionario_asg["id"] != limpeza["funcionario_asg_id"]:
+                return jsonify({
+                    "erro": "INTERVALO_ASG_INVALIDO",
+                    "mensagem": "Apenas o ASG que iniciou a limpeza pode ativar o Intervalo."
+                }), 403
+
+            cursor.execute("""
+                UPDATE registro_limpeza
+                SET intervalo_liberado = 1
+                WHERE id = %s
+                  AND status = 'EM_ANDAMENTO'
+            """, (id_limpeza,))
+
+            if cursor.rowcount == 0:
+                return jsonify({"erro": "Limpeza não encontrada ou status inválido"}), 404
+
+        conn.commit()
+        atualizacao_evento.set()
+        return jsonify({"mensagem": "Intervalo liberado com sucesso"})
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ ERRO em ativar_intervalo_limpeza: {e}")
         return jsonify({"erro": str(e)}), 500
     finally:
         conn.close()
@@ -576,6 +701,22 @@ def registrar_limpeza():
                         "mensagem": "Este tablet já possui 2 limpezas em andamento."
                     }), 400
 
+                # Buscar o funcionario_asg_id baseado no cartão
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_asg,))
+
+                funcionario = cursor.fetchone()
+
+                if not funcionario:
+                    return jsonify({
+                        "erro": "Funcionário ASG não encontrado ou inativo"
+                    }), 400
+
+                funcionario_asg_id = funcionario['id']
+
                 # Tratar paciente null/vazio
                 if not paciente or paciente.strip() == "":
                     paciente_para_inserir = "S/P"
@@ -585,15 +726,17 @@ def registrar_limpeza():
                 cursor.execute("""
                     INSERT INTO registro_limpeza (
                         id_cartao_asg,
+                        funcionario_asg_id,
                         ip_dispositivo,
                         numero_leito,
                         paciente,
                         setor,
                         tipo_limpeza,
                         status
-                    ) VALUES (%s, %s, %s, %s, %s, %s, 'EM_ANDAMENTO')
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'EM_ANDAMENTO')
                 """, (
                     id_cartao_asg,
+                    funcionario_asg_id,
                     ip_dispositivo,
                     numero_leito,
                     paciente_para_inserir,
@@ -635,6 +778,22 @@ def registrar_limpeza():
 
                 data_validacao = datetime.now()
 
+                # Buscar funcionario_enf_id baseado no cartão
+                cursor.execute("""
+                    SELECT id FROM funcionarios
+                    WHERE id_cartao = %s AND status = 1
+                    LIMIT 1
+                """, (id_cartao_enf,))
+
+                funcionario_enf = cursor.fetchone()
+
+                if not funcionario_enf:
+                    return jsonify({
+                        "erro": "Funcionário Enfermeiro não encontrado ou inativo"
+                    }), 400
+
+                funcionario_enf_id = funcionario_enf['id']
+
                 # Busca os dados completos da limpeza (incluindo setor/leito)
                 cursor.execute("""
                     SELECT tipo_limpeza, data_fim, setor, numero_leito
@@ -651,7 +810,8 @@ def registrar_limpeza():
                 data_fim = row["data_fim"]
                 setor = row["setor"]
                 leito = row["numero_leito"]
-                
+                setor_norm = (setor or "").strip().upper()
+
                 if not data_fim:
                     return jsonify({
                         "erro": "Data de fim não encontrada. Finalize primeiro a limpeza."
@@ -661,24 +821,30 @@ def registrar_limpeza():
                 print(f"📅 Data fim original: {data_fim}")
                 print(f"📅 Data validação: {data_validacao}")
 
-                # 👇 ANTES DE FINALIZAR A NOVA, CANCELA OS TIMERS DA LIMPEZA ANTIGA
-                limpeza_antiga_id = encontrar_limpeza_antiga(setor, leito)
-                
-                if limpeza_antiga_id:
-                    logging.info(f"🔄 Encontrada limpeza antiga {limpeza_antiga_id} para cancelar")
-                    cancelar_alertas_limpeza_antiga(limpeza_antiga_id)
-
-                # Define vencimento
+                # ============================================================
+                # 🔥 REGRA DE VENCIMENTO:
+                # - Aplica para: ALTA/ÓBITO/TRANSFERÊNCIA, LONGA PERMANÊNCIA (demais setores)
+                #   ou PROGRAMADA/EXTRA (Centro Cirúrgico)
+                # - CENTRO CIRÚRGICO: vence em 1 dia
+                # - Demais setores: vence em 8 dias
+                # ============================================================
                 vencimento = None
-                if tipo_norm in ("ALTA / ÓBITO / TRANSFERÊNCIA", 
-                                "LONGA PERMANÊNCIA", 
-                                "LONGA PERMANENCIA"):
-                    vencimento = data_validacao + timedelta(days=8)
+                tipos_com_vencimento = (
+                    "ALTA / ÓBITO / TRANSFERÊNCIA", "LONGA PERMANÊNCIA", "LONGA PERMANENCIA",
+                    "PROGRAMADA", "EXTRA"
+                )
 
-                # UPDATE finalizando
+                if tipo_norm in tipos_com_vencimento:
+                    if "CENTRO CIRURGICO" in setor_norm or "CENTRO CIRÚRGICO" in setor_norm:
+                        vencimento = data_validacao + timedelta(days=1)
+                    else:
+                        vencimento = data_validacao + timedelta(days=8)
+
+                # UPDATE finalizando (com as duas colunas: id_cartao_enf + funcionario_enf_id)
                 cursor.execute("""
                     UPDATE registro_limpeza
                     SET id_cartao_enf = %s,
+                        funcionario_enf_id = %s,
                         data_validacao = %s,
                         tempo_total_seconds = %s,
                         tempo_total_text = %s,
@@ -688,6 +854,7 @@ def registrar_limpeza():
                     AND status = 'AGUARDANDO_VALIDACAO'
                 """, (
                     id_cartao_enf,
+                    funcionario_enf_id,
                     data_validacao,
                     tempo_total_seconds,
                     tempo_total_text,
@@ -702,16 +869,6 @@ def registrar_limpeza():
 
                 conn.commit()
 
-                # 👇 AGENDAR TIMERS PARA A NOVA LIMPEZA
-                if vencimento:
-                    agendar_nova_limpeza(id_limpeza, vencimento)
-                    logging.info(f"📅 Limpeza {id_limpeza} agendada para vencimento em {vencimento}")
-                
-                if data_validacao:
-                    agendar_alertas_limpeza(id_limpeza, data_validacao)
-                    logging.info(f"📅 Alertas 5/6/7 dias agendados para limpeza {id_limpeza}")
-
-               
                 atualizacao_evento.set()
                 
                
@@ -725,16 +882,6 @@ def registrar_limpeza():
                     'vencimento': vencimento.isoformat() if vencimento else None,
                     'timestamp': datetime.now().isoformat()
                 })
-                
-                # Se cancelou uma limpeza antiga, publicar evento também
-                if limpeza_antiga_id:
-                    publicar_evento('limpeza_antiga_cancelada', {
-                        'id_antiga': limpeza_antiga_id,
-                        'id_nova': id_limpeza,
-                        'setor': setor,
-                        'leito': leito,
-                        'timestamp': datetime.now().isoformat()
-                    })
 
                 return jsonify({
                     "mensagem": "Limpeza validada com sucesso!",
@@ -811,17 +958,31 @@ def verificar_limpeza_funcionario():
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            
+
+            # Resolve o funcionario_id atual baseado no cartão
+            cursor.execute("""
+                SELECT id FROM funcionarios
+                WHERE id_cartao = %s AND status = 1
+            """, (id_cartao,))
+
+            funcionario = cursor.fetchone()
+
+            if not funcionario:
+                return jsonify({
+                    "limpeza_ativa": False,
+                    "mensagem": "Funcionário não encontrado ou inativo."
+                })
+
             cursor.execute("""
                 SELECT 1
                 FROM registro_limpeza
-                WHERE (id_cartao_asg = %s 
-                       OR id_cartao_enf = %s 
-                       OR id_cartao_tec = %s)
+                WHERE (funcionario_asg_id = %s
+                       OR funcionario_enf_id = %s
+                       OR funcionario_tec_id = %s)
                   AND status IN ('EM_ANDAMENTO', 'AGUARDANDO_VALIDACAO')
                 LIMIT 1
-            """, (id_cartao, id_cartao, id_cartao))
-            
+            """, (funcionario['id'], funcionario['id'], funcionario['id']))
+
             if cursor.fetchone():
                 return jsonify({
                     "limpeza_ativa": True,

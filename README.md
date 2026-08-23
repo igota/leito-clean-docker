@@ -83,6 +83,6 @@ graph TD
 
 ```
 
-### 4. Fluxo Completo de Limpeza
+### 4. Autor
 
 Igor Maciel de Sousa

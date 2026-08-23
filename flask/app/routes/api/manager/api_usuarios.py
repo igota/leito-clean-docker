@@ -1,5 +1,4 @@
-from flask import Blueprint, request, jsonify, session
-import pymysql
+from flask import Blueprint, request, jsonify
 from ....database.conexao import get_db_connection
 from ....utils.helpers import login_required, tipo_required
 import traceback

@@ -1,7 +1,6 @@
-import redis
 import json
+from ..config.settings import redis_client
 
-redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
 def publicar_evento(evento, dados):
     mensagem = {

@@ -2,10 +2,52 @@ from flask import Blueprint, request, jsonify, session
 import pymysql
 from ....database.conexao import get_db_connection
 from ....utils.helpers import login_required, tipo_required
-import traceback
+
 
 # Criar o blueprint
 funcionarios_bp = Blueprint('funcionarios', __name__)
+
+
+def validar_disponibilidade_cartao(id_cartao, funcionario_id=None):
+    """
+    Verifica se o cartão pode ser usado.
+    Retorna (bool, str) - (pode_usar, mensagem)
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            if funcionario_id:
+                # Para edição: busca OUTROS funcionários com mesmo cartão
+                cursor.execute("""
+                    SELECT id, nome, status
+                    FROM funcionarios
+                    WHERE id_cartao = %s AND id != %s
+                """, (id_cartao, funcionario_id))
+            else:
+                # Para cadastro: busca QUALQUER funcionário com mesmo cartão
+                cursor.execute("""
+                    SELECT id, nome, status
+                    FROM funcionarios
+                    WHERE id_cartao = %s
+                """, (id_cartao,))
+
+            funcionarios_com_mesmo_cartao = cursor.fetchall()
+
+            if not funcionarios_com_mesmo_cartao:
+                return True, "Cartão disponível"
+
+            # Verifica se algum deles está ATIVO
+            for func in funcionarios_com_mesmo_cartao:
+                if func['status'] == 1:
+                    return False, f"⚠️ Cartão já está em uso pelo funcionário ATIVO: {func['nome']}"
+
+            # Se chegou aqui, só existem funcionários INATIVOS com este cartão
+            return True, "Cartão disponível (pertencia a funcionário inativo)"
+
+    except Exception as e:
+        return False, f"Erro ao validar cartão: {str(e)}"
+    finally:
+        conn.close()
 
 
 @funcionarios_bp.route('/api/funcionarios', methods=['GET'])
@@ -27,7 +69,32 @@ def listar_funcionarios():
         print(f"❌ Erro ao listar funcionários: {e}")
         return jsonify([]), 500
     finally:
-        conn.close()    
+        conn.close()
+
+
+@funcionarios_bp.route('/api/buscar_funcionario_icontrol', methods=['POST'])
+@tipo_required('ADMIN', 'GERENTE')
+@login_required
+def buscar_funcionario_icontrol():
+    from ....services.icontrol import BuscaCredencial
+
+    dados = request.json or {}
+    tipo = dados.get('tipo', '')  # 'nome' ou 'identificador'
+    valor = (dados.get('valor') or '').strip()
+
+    if not valor:
+        return jsonify({"sucesso": False, "erro": "Informe o valor para busca."}), 400
+
+    busca = BuscaCredencial()
+
+    if tipo == 'nome':
+        resultados = busca.buscar_por_nome(valor)
+    elif tipo == 'identificador':
+        resultados = busca.buscar_por_identificador(valor)
+    else:
+        return jsonify({"sucesso": False, "erro": "Tipo de busca inválido."}), 400
+
+    return jsonify({"sucesso": True, "resultados": resultados, "total": len(resultados)})
 
 
 @funcionarios_bp.route('/api/cadastrar_funcionarios', methods=['POST'])
@@ -43,9 +110,14 @@ def cadastrar_funcionarios():
     if not (nome and cpf and id_cartao and tipo):
         return jsonify({"erro": "⚠️ Preencha todos os campos obrigatórios."}), 400
 
-    # Validação: 9 a 10 dígitos, apenas números
-    if not (9 <= len(id_cartao) <= 10) or not id_cartao.isdigit():
+    # Validação: 8 a 10 dígitos, apenas números
+    if not (8 <= len(id_cartao) <= 10) or not id_cartao.isdigit():
         return jsonify({"erro": "⚠️ O ID do cartão deve conter entre 8 e 10 números."}), 400
+
+    # 🔥 VALIDAÇÃO: Verifica se o cartão pode ser usado
+    pode_usar, mensagem = validar_disponibilidade_cartao(id_cartao)
+    if not pode_usar:
+        return jsonify({"erro": mensagem}), 400
 
     try:
         conn = get_db_connection()
@@ -65,10 +137,8 @@ def cadastrar_funcionarios():
         if "Duplicate entry" in erro and "cpf" in erro:
             return jsonify({"erro": "⚠️ Este CPF já está cadastrado."}), 400
 
-        if "Duplicate entry" in erro and "id_cartao" in erro:
-            return jsonify({"erro": "⚠️ Este ID de cartão já está em uso."}), 400
-
-        return jsonify({"erro": "❌ Erro interno ao cadastrar funcionário."}), 500
+        # Não precisa mais verificar id_cartao duplicado (já validamos antes)
+        return jsonify({"erro": f"❌ Erro interno ao cadastrar: {erro}"}), 500
 
 
 @funcionarios_bp.route('/api/consultar_funcionarios', methods=['POST'])
@@ -111,11 +181,10 @@ def consultar_funcionarios():
                 query += " AND tipo = %s"
                 params.append(tipo)
 
+            query += " ORDER BY nome ASC"
+
             cursor.execute(query, params)
             funcionarios = cursor.fetchall()
-
-            print("FILTROS RECEBIDOS:", dados)
-            print("ID CARTAO FILTRADO:", id_cartao)
 
             for u in funcionarios:
                 u["status"] = int(u["status"]) if u["status"] is not None else 0
@@ -138,18 +207,36 @@ def consultar_funcionarios():
 @login_required 
 def editar_funcionarios():
     dados = request.json
-    id = dados.get("id")
+    id_func = dados.get("id")
     nome = dados.get("nome")
     cpf = dados.get("cpf")
-    id_cartao = dados.get("id_cartao")
+    id_cartao = dados.get("id_cartao", "").strip()
     tipo = dados.get("tipo")
     status = dados.get("status")
-    
+
     if not (nome and cpf and id_cartao and tipo):
         return jsonify({"erro": "⚠️ Preencha todos os campos obrigatórios."}), 400
 
-    if not id:
+    if not id_func:
         return jsonify({"erro": "ID do funcionário não informado"}), 400
+
+    # Validação: 8 a 10 dígitos, apenas números
+    if not (8 <= len(id_cartao) <= 10) or not id_cartao.isdigit():
+        return jsonify({"erro": "⚠️ O ID do cartão deve conter entre 8 e 10 números."}), 400
+
+    # Converte status para inteiro
+    if status is not None:
+        if isinstance(status, str):
+            status = 1 if status.lower() in ['true', '1', 'ativo'] else 0
+        elif isinstance(status, bool):
+            status = 1 if status else 0
+        else:
+            status = int(status) if status else 0
+
+    # 🔥 VALIDAÇÃO: Verifica se o cartão pode ser usado (ignorando o próprio)
+    pode_usar, mensagem = validar_disponibilidade_cartao(id_cartao, id_func)
+    if not pode_usar:
+        return jsonify({"erro": mensagem}), 400
 
     try:
         conn = get_db_connection()
@@ -158,18 +245,20 @@ def editar_funcionarios():
                 UPDATE funcionarios
                 SET nome=%s, cpf=%s, id_cartao=%s, tipo=%s, status=%s
                 WHERE id=%s
-            """, (nome, cpf, id_cartao, tipo, status, id))
+            """, (nome, cpf, id_cartao, tipo, status, id_func))
             conn.commit()
+
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({"erro": "Funcionário não encontrado"}), 404
+
         conn.close()
         return jsonify({"mensagem": "Funcionário atualizado com sucesso!"})
-        
+
     except Exception as e:
         erro = str(e)
 
         if "Duplicate entry" in erro and "cpf" in erro:
             return jsonify({"erro": "⚠️ Este CPF já está cadastrado."}), 400
 
-        if "Duplicate entry" in erro and "id_cartao" in erro:
-            return jsonify({"erro": "⚠️ Este ID de cartão já está em uso."}), 400
-
-        return jsonify({"erro": "❌ Erro interno ao editar funcionário."}), 500
+        return jsonify({"erro": f"❌ Erro interno ao editar: {erro}"}), 500

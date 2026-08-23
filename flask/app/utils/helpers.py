@@ -1,6 +1,6 @@
 from datetime import datetime
 from functools import wraps
-from flask import session, request, redirect, url_for, jsonify, current_app
+from flask import session, request, redirect, url_for, jsonify
 from app.config import settings
 import logging
 
@@ -121,7 +121,12 @@ def controle_sessao():
         session['tipo_usuario'] = dados.get('tipo')
         session['logado'] = True
         session['session_id'] = session_id
-        
+
+        # 🔥 Renova o TTL a cada requisição (janela deslizante, igual ao
+        # sistema original: usuário ativo nunca é derrubado por inatividade)
+        tempo_ttl = settings.TEMPOS_SESSAO.get(dados.get('tipo'), settings.TEMPOS_SESSAO['NAO_CADASTRADO'])
+        SESSION_REDIS.expire(chave, tempo_ttl)
+
         logging.info(f"✅ Sessão válida: {usuario} - {session_id}")
 
     except Exception as e:
@@ -132,6 +137,13 @@ def controle_sessao():
         return response
 
     return None
+
+def _requisicao_ajax():
+    return (
+        request.headers.get("Accept") == "application/json"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
+
 
 def tipo_required(*tipos_permitidos):
     def decorator(f):
@@ -147,6 +159,8 @@ def tipo_required(*tipos_permitidos):
                 return f(*args, **kwargs)
 
             if not session.get('logado'):
+                if _requisicao_ajax():
+                    return jsonify({"erro": "Não autorizado"}), 401
                 return redirect(url_for('manager.index'))
 
             tipo_usuario = session.get('tipo_usuario', 'NAO_CADASTRADO')
@@ -154,8 +168,26 @@ def tipo_required(*tipos_permitidos):
             if tipo_usuario in tipos_permitidos:
                 return f(*args, **kwargs)
 
+            # Mensagem personalizada baseada no tipo
+            if tipo_usuario == 'ENFERMAGEM':
+                mensagem = "🔒 Esta funcionalidade é restrita a ADMIN ou GERENTE."
+            elif tipo_usuario in ['NAO_CADASTRADO', 'INATIVO']:
+                mensagem = "🔒 Você precisa estar cadastrado no sistema para acessar esta funcionalidade."
+            elif tipo_usuario == 'GERENTE':
+                mensagem = "🔒 Acesso restrito a administradores. Gerentes não têm permissão para esta área."
+            else:
+                mensagem = "🔒 Você não tem permissão para acessar esta página."
+
+            # 🔥 Para requisições AJAX/JSON, retorna JSON em vez de redirecionar
+            if _requisicao_ajax():
+                return jsonify({
+                    "erro": "acesso_negado",
+                    "mensagem": mensagem,
+                    "tipo_usuario": tipo_usuario
+                }), 403
+
             session['toast_message'] = {
-                'texto': "🔒 Acesso negado.",
+                'texto': mensagem,
                 'tipo': 'warning'
             }
 
@@ -177,8 +209,12 @@ def login_required(f):
             return f(*args, **kwargs)
 
         if not session.get('logado'):
+            if _requisicao_ajax():
+                return jsonify({"erro": "Não autorizado"}), 401
             return redirect(url_for('manager.index'))
 
         return f(*args, **kwargs)
 
     return decorated_function
+
+
