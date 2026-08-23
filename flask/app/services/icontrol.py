@@ -2,6 +2,7 @@ import requests
 import unicodedata
 import urllib3
 from typing import List, Dict, Any
+from ..config.settings import ICONTROL_BASE_URL, ICONTROL_LOGIN, ICONTROL_SENHA
 
 urllib3.disable_warnings()
 
@@ -17,11 +18,11 @@ class BuscaCredencial:
     def __init__(self):
         self.session = requests.Session()
         self.session.verify = False
-        self.base_url = 'https://172.22.61.250:8889'
+        self.base_url = ICONTROL_BASE_URL
         self.logado = False
 
     def login(self) -> bool:
-        login_data = {'Login': 'igor', 'Senha': '123456'}
+        login_data = {'Login': ICONTROL_LOGIN, 'Senha': ICONTROL_SENHA}
         try:
             response = self.session.post(
                 f'{self.base_url}/usuariosistema/login',

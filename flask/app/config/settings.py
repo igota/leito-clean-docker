@@ -134,6 +134,18 @@ LOGIN_URL = f"{BASE_URL}/pacientehrn/login.jsf"
 PAGINA_PRINCIPAL = f"{BASE_URL}/pacientehrn/paginaPrincipal.jsf"
 PEP_URL = f"{BASE_URL}/pacientehrn/cs_pep_sem_status.jsf"
 
+# ===== CONFIGURAÇÕES DO ICONTROL =====
+ICONTROL_BASE_URL = os.getenv('ICONTROL_BASE_URL')
+ICONTROL_LOGIN = os.getenv('ICONTROL_LOGIN')
+ICONTROL_SENHA = os.getenv('ICONTROL_SENHA')
+
+if not ICONTROL_BASE_URL:
+    raise ValueError("ICONTROL_BASE_URL não configurado")
+if not ICONTROL_LOGIN:
+    raise ValueError("ICONTROL_LOGIN não configurado")
+if not ICONTROL_SENHA:
+    raise ValueError("ICONTROL_SENHA não configurado")
+
 # ===== CONFIGURAÇÕES DE ATUALIZAÇÃO =====
 INTERVALO_ATUALIZACAO = int(os.getenv('INTERVALO_ATUALIZACAO', '120'))
 
