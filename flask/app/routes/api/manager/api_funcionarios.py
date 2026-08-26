@@ -76,7 +76,7 @@ def listar_funcionarios():
 @tipo_required('ADMIN', 'GERENTE')
 @login_required
 def buscar_funcionario_icontrol():
-    from ....services.icontrol import BuscaCredencial
+    from ....services.icontrol import obter_sessao_icontrol
 
     dados = request.json or {}
     tipo = dados.get('tipo', '')  # 'nome' ou 'identificador'
@@ -85,14 +85,14 @@ def buscar_funcionario_icontrol():
     if not valor:
         return jsonify({"sucesso": False, "erro": "Informe o valor para busca."}), 400
 
-    busca = BuscaCredencial()
-
-    if tipo == 'nome':
-        resultados = busca.buscar_por_nome(valor)
-    elif tipo == 'identificador':
-        resultados = busca.buscar_por_identificador(valor)
-    else:
+    if tipo not in ('nome', 'identificador'):
         return jsonify({"sucesso": False, "erro": "Tipo de busca inválido."}), 400
+
+    with obter_sessao_icontrol() as busca:
+        if tipo == 'nome':
+            resultados = busca.buscar_por_nome(valor)
+        else:
+            resultados = busca.buscar_por_identificador(valor)
 
     return jsonify({"sucesso": True, "resultados": resultados, "total": len(resultados)})
 

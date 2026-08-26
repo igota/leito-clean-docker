@@ -14,7 +14,7 @@
 
 O **Leito Clean** digitaliza o fluxo de higienização de leitos hospitalares, que antes era controlado por rádio/telefone e planilhas. O sistema dá rastreabilidade completa: quem solicitou a limpeza, qual ASG (auxiliar de serviços gerais) executou, qual enfermeiro(a) validou, e quanto tempo o leito ficou indisponível — tudo identificado via **leitura de cartão RFID** em tablets espalhados pelos setores.
 
-Está em operação nas UTIs I,II, III e IV do HRN, com integração direta ao sistema hospitalar já existente (**Vitae**) para autenticação e dados de pacientes/leitos, evitando cadastros duplicados.
+Está em operação nas UTIs I,II,III,IV e Centro Cirúrgico Geral do HRN, com integração direta ao sistema hospitalar já existente (**Vitae**) para autenticação e dados de pacientes/leitos, evitando cadastros duplicados.
 
 ### Objetivos de negócio
 

@@ -1,6 +1,8 @@
+import queue
 import requests
 import unicodedata
 import urllib3
+from contextlib import contextmanager
 from typing import List, Dict, Any
 from ..config.settings import ICONTROL_BASE_URL, ICONTROL_LOGIN, ICONTROL_SENHA
 
@@ -74,7 +76,7 @@ class BuscaCredencial:
             form[f'columns[{i}][search][regex]']   = 'false'
         return form
 
-    def _executar_busca(self, form_data: dict) -> List[Dict[str, Any]]:
+    def _executar_busca(self, form_data: dict, _tentativa: int = 1) -> List[Dict[str, Any]]:
         if not self.logado:
             if not self.login():
                 return []
@@ -86,8 +88,19 @@ class BuscaCredencial:
         try:
             response = self.session.post(f'{self.base_url}/credencial', data=form_data, headers=headers)
             if response.status_code != 200:
+                # Sessão de longa duração pode ter expirado no iControl; refaz login uma vez.
+                if _tentativa == 1:
+                    self.logado = False
+                    return self._executar_busca(form_data, _tentativa=2)
                 return []
-            data = response.json()
+            try:
+                data = response.json()
+            except ValueError:
+                # Sessão expirada costuma redirecionar (200) para a página de login em HTML, não JSON.
+                if _tentativa == 1:
+                    self.logado = False
+                    return self._executar_busca(form_data, _tentativa=2)
+                return []
             resultados = []
             for p in data.get('data') or []:
                 resultados.append({
@@ -104,3 +117,23 @@ class BuscaCredencial:
         except Exception as e:
             print(f"❌ Erro na requisição ao iControl: {e}")
             return []
+
+
+# ===== POOL DE SESSÕES =====
+# Cada slot mantém uma sessão HTTP autenticada e reaproveitada entre requests
+# (evita refazer login/TCP/TLS a cada busca). O pool permite buscas concorrentes
+# sem duas threads disputarem a mesma instância de `requests.Session`.
+_POOL_SIZE = 5
+_pool: "queue.Queue[BuscaCredencial]" = queue.Queue(maxsize=_POOL_SIZE)
+for _ in range(_POOL_SIZE):
+    _pool.put(BuscaCredencial())
+
+
+@contextmanager
+def obter_sessao_icontrol():
+    """Empresta uma sessão do pool; bloqueia se as 5 estiverem em uso."""
+    sessao = _pool.get()
+    try:
+        yield sessao
+    finally:
+        _pool.put(sessao)
