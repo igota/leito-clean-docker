@@ -149,6 +149,10 @@ if not ICONTROL_SENHA:
 # ===== CONFIGURAÇÕES DE ATUALIZAÇÃO =====
 INTERVALO_ATUALIZACAO = int(os.getenv('INTERVALO_ATUALIZACAO', '120'))
 
+# ===== TEMPO MÍNIMO DE LIMPEZA (minutos) =====
+TEMPO_MINIMO_LIMPEZA_PADRAO = int(os.getenv('TEMPO_MINIMO_LIMPEZA_PADRAO', '35'))
+TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO = int(os.getenv('TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO', '15'))
+
 # ===== VARIÁVEIS GLOBAIS =====
 timers_limpeza = {}
 atualizacao_evento = Event()

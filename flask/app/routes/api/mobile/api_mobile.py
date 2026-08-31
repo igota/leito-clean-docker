@@ -3,7 +3,12 @@ from datetime import datetime, timedelta
 import os
 import json
 import logging
-from ....config.settings import LEITOS_CACHE_FILE, atualizacao_evento
+from ....config.settings import (
+    LEITOS_CACHE_FILE,
+    atualizacao_evento,
+    TEMPO_MINIMO_LIMPEZA_PADRAO,
+    TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO,
+)
 from ....database.conexao import get_db_connection
 from ....utils.helpers import get_client_ip
 from ....events.redis_events import publicar_evento
@@ -513,14 +518,14 @@ def limpeza_aguardando_validacao():
                     "mensagem": "Apenas o ASG que iniciou a limpeza pode finalizá-la."
                 }), 403
 
-            # ⏱️ Verifica se já passou o tempo mínimo (15 min para Centro Cirúrgico, 35 min para os demais)
+            # ⏱️ Verifica se já passou o tempo mínimo (configurável via .env: TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO / TEMPO_MINIMO_LIMPEZA_PADRAO)
             data_inicio = limpeza["data_inicio"]
             agora = datetime.now()
             minutos_decorridos = (agora - data_inicio).total_seconds() / 60
 
             setor_norm = (setor or "").strip().upper()
             eh_centro_cirurgico = "CENTRO CIRURGICO" in setor_norm or "CENTRO CIRÚRGICO" in setor_norm
-            tempo_minimo = 15 if eh_centro_cirurgico else 35
+            tempo_minimo = TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO if eh_centro_cirurgico else TEMPO_MINIMO_LIMPEZA_PADRAO
 
             if minutos_decorridos < tempo_minimo:
                 minutos_faltantes = round(tempo_minimo - minutos_decorridos, 1)

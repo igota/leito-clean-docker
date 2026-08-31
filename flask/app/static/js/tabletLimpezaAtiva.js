@@ -885,10 +885,13 @@
 
             console.log(`Tempo decorrido: ${tempoDecorridoMinutos} minutos`);
 
-            // Centro Cirúrgico tem tempo mínimo reduzido (15 min); demais setores, 35 min
+            // Centro Cirúrgico tem tempo mínimo reduzido; demais setores usam o padrão
+            // (valores configuráveis via .env: TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO / TEMPO_MINIMO_LIMPEZA_PADRAO)
             const setorNorm = (limpeza.setor || "").trim().toUpperCase();
             const ehCentroCirurgico = setorNorm.includes("CENTRO CIRURGICO") || setorNorm.includes("CENTRO CIRÚRGICO");
-            const TEMPO_MINIMO = ehCentroCirurgico ? 15 : 35;
+            const TEMPO_MINIMO = ehCentroCirurgico
+                ? (window.TEMPO_MINIMO_LIMPEZA_CENTRO_CIRURGICO ?? 15)
+                : (window.TEMPO_MINIMO_LIMPEZA_PADRAO ?? 35);
 
             // Se for menor que o tempo mínimo, BLOQUEIA
             if (tempoDecorridoMinutos < TEMPO_MINIMO) {
