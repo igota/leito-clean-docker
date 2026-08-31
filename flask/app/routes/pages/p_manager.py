@@ -284,7 +284,7 @@ def previa_relatorio():
 
 
 @manager_bp.route("/relatorios/dashboard")
-@tipo_required('ADMIN', 'GERENTE')
+@tipo_required('ADMIN')
 @login_required
 def pagina_dashboard_relatorios():
     return render_template("paginaDashboard.html")
