@@ -1,11 +1,41 @@
 from flask import Blueprint, request, jsonify, session
 from pymysql import IntegrityError
+import logging
 from ....database.conexao import get_db_connection
 from ....utils.helpers import login_required, tipo_required
+from ....services.threads import atualizar_leitos_lock, atualizar_leitos_por_ip_uma_vez
 import traceback
 
 # Criar o blueprint
 dispositivos_bp = Blueprint('dispositivos', __name__)
+
+
+@dispositivos_bp.route("/api/atualizar_dispositivos", methods=["POST"])
+@login_required
+@tipo_required('ADMIN', 'GERENTE')
+def atualizar_dispositivos_manual():
+    """
+    Dispara manualmente uma rodada da thread_atualizar_leitos_por_ip (busca no PEP
+    e regravação do cache), para testes sem esperar o próximo ciclo automático.
+    """
+    if not atualizar_leitos_lock.acquire(blocking=False):
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Atualização automática já em andamento. Aguarde ela terminar e tente novamente."
+        }), 409
+
+    try:
+        cache_final = atualizar_leitos_por_ip_uma_vez()
+        return jsonify({
+            "status": "ok",
+            "mensagem": "Dispositivos atualizados com sucesso",
+            "dispositivos": len(cache_final)
+        }), 200
+    except Exception as e:
+        logging.exception("Erro na rota /api/atualizar_dispositivos")
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+    finally:
+        atualizar_leitos_lock.release()
 
 
 @dispositivos_bp.route("/api/config/dispositivos", methods=["POST"])

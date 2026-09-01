@@ -280,7 +280,7 @@ def get_leitos_por_setor():
     for l in leitos_setor:
         numero_leito = (l.get("numero_leito") or "").strip()
         tem_paciente = bool(l.get("paciente"))
-        
+
         if numero_leito in leitos_pendentes:
             icone = "vermelho"
             status = "pendente"
@@ -290,7 +290,7 @@ def get_leitos_por_setor():
         else:
             icone = "verde"
             status = "livre"
-        
+
         leito_processado = {
             "numero_str": numero_leito,
             "paciente": l.get("paciente"),
@@ -299,7 +299,7 @@ def get_leitos_por_setor():
             "dados": l
         }
         todos_leitos_processados.append(leito_processado)
-        
+
         if numero_leito.isdigit():
             leito_processado["numero_int"] = int(numero_leito)
             leitos_fixos_ocupados.append(leito_processado)
@@ -307,17 +307,21 @@ def get_leitos_por_setor():
             leitos_extras.append(leito_processado)
 
     # Lógica de preenchimento
+    # qtd_leitos configurada = SOMENTE fixos. Extras não contam para essa meta
+    # e são sempre exibidos além dos fixos (nunca "roubam vaga" nem viram excedente).
     resultado = []
-    
-    total_existentes = len(leitos_fixos_ocupados) + len(leitos_extras)
-    logging.info(f"📊 Leitos existentes: {total_existentes} (fixos: {len(leitos_fixos_ocupados)}, extras: {len(leitos_extras)})")
-    
-    numeros_ocupados = {item["numero_int"] for item in leitos_fixos_ocupados}
-    
-    if total_existentes >= total_fixos:
-        logging.info(f"✅ Já tem leitos suficientess ({total_existentes} >= {total_fixos})")
-        
-        for fixo in sorted(leitos_fixos_ocupados, key=lambda x: x["numero_int"]):
+
+    logging.info(f"📊 Leitos existentes: fixos reais: {len(leitos_fixos_ocupados)}, extras: {len(leitos_extras)}")
+
+    leitos_fixos_por_numero = {item["numero_int"]: item for item in leitos_fixos_ocupados}
+
+    # Sempre exibe 1..total_fixos; se o PEP retornar um fixo numérico acima de
+    # total_fixos (configuração desatualizada), ele também é incluído em vez de descartado.
+    numeros_fixos_a_exibir = sorted(set(range(1, total_fixos + 1)) | set(leitos_fixos_por_numero.keys()))
+
+    for numero_atual in numeros_fixos_a_exibir:
+        fixo = leitos_fixos_por_numero.get(numero_atual)
+        if fixo:
             resultado.append({
                 "numero_leito": fixo["numero_str"],
                 "setor": setor,
@@ -326,81 +330,39 @@ def get_leitos_por_setor():
                 "icone": fixo["icone"],
                 "paciente": fixo["paciente"]
             })
-        
-        slots_restantes = total_fixos - len(leitos_fixos_ocupados)
-        if slots_restantes > 0:
-            for extra in leitos_extras[:slots_restantes]:
-                resultado.append({
-                    "numero_leito": extra["numero_str"],
-                    "setor": setor,
-                    "tipo": "extra",
-                    "status": extra["status"],
-                    "icone": extra["icone"],
-                    "paciente": extra["paciente"]
-                })
-        
-        if len(leitos_extras) > slots_restantes:
-            for extra in leitos_extras[slots_restantes:]:
-                resultado.append({
-                    "numero_leito": extra["numero_str"],
-                    "setor": setor,
-                    "tipo": "extra_excedente",
-                    "status": extra["status"],
-                    "icone": extra["icone"],
-                    "paciente": extra["paciente"]
-                })
-    
-    else:
-        leitos_faltando = total_fixos - total_existentes
-        logging.info(f"📝 Faltam {leitos_faltando} leitos para completar {total_fixos}")
-        
-        for fixo in sorted(leitos_fixos_ocupados, key=lambda x: x["numero_int"]):
+        else:
+            # Leito fixo sem dado no PEP: cria virtual livre (ou pendente, se aplicável)
+            numero_str = str(numero_atual).zfill(2)
+            if numero_str in leitos_pendentes:
+                icone = "vermelho"
+                status = "pendente"
+            else:
+                icone = "verde"
+                status = "livre"
+
             resultado.append({
-                "numero_leito": fixo["numero_str"],
+                "numero_leito": numero_str,
                 "setor": setor,
                 "tipo": "fixo",
-                "status": fixo["status"],
-                "icone": fixo["icone"],
-                "paciente": fixo["paciente"]
+                "status": status,
+                "icone": icone,
+                "paciente": None
             })
-        
-        for extra in leitos_extras:
-            resultado.append({
-                "numero_leito": extra["numero_str"],
-                "setor": setor,
-                "tipo": "extra",
-                "status": extra["status"],
-                "icone": extra["icone"],
-                "paciente": extra["paciente"]
-            })
-        
-        leitos_livres_adicionados = 0
-        numero_atual = 1
-        
-        while leitos_livres_adicionados < leitos_faltando:
-            if numero_atual not in numeros_ocupados:
-                numero_str = str(numero_atual).zfill(2)
-                if numero_str in leitos_pendentes:
-                    icone = "vermelho"
-                    status = "pendente"
-                else:
-                    icone = "verde"
-                    status = "livre"
-                
-                resultado.append({
-                    "numero_leito": numero_str,
-                    "setor": setor,
-                    "tipo": "fixo",
-                    "status": status,
-                    "icone": icone,
-                    "paciente": None
-                })
-                leitos_livres_adicionados += 1
-            numero_atual += 1
+
+    # Extras: sempre todos, sempre depois dos fixos
+    for extra in leitos_extras:
+        resultado.append({
+            "numero_leito": extra["numero_str"],
+            "setor": setor,
+            "tipo": "extra",
+            "status": extra["status"],
+            "icone": extra["icone"],
+            "paciente": extra["paciente"]
+        })
 
     # Ordenação final
     resultado.sort(key=lambda x: (
-        0 if x["tipo"] == "fixo" else (1 if x["tipo"] == "extra" else 2),
+        0 if x["tipo"] == "fixo" else 1,
         int(x["numero_leito"]) if x["numero_leito"].isdigit() else 99999,
         x["numero_leito"]
     ))
@@ -423,12 +385,15 @@ def get_leitos_por_setor():
     logging.info(f"📊 Total leitos retornados: {len(resultado)}")
     logging.info(f"🔴 Total pendentes REAL: {total_pendentes_real}")
 
+    fixos_no_resultado = [l for l in resultado if l["tipo"] == "fixo"]
+    livres_fixos = len([l for l in fixos_no_resultado if l["status"] == "livre"])
+
     return jsonify({
         "status": "ok",
         "configuracao": {
             "total_fixos": total_fixos,
-            "ocupados": len(leitos_fixos_ocupados) + min(len(leitos_extras), total_fixos - len(leitos_fixos_ocupados)),
-            "livres": max(0, total_fixos - (len(leitos_fixos_ocupados) + len(leitos_extras))),
+            "ocupados": len(fixos_no_resultado) - livres_fixos,
+            "livres": livres_fixos,
             "extras": len(leitos_extras),
             "pendentes": total_pendentes_real,
             "pendentes_com_paciente": pendentes_com_paciente,

@@ -126,6 +126,36 @@ async function carregarSetoresDispositivoDoJson(selectElement) {
     }
 }
 
+// Botão "Atualizar Dispositivos" - dispara manualmente a busca de leitos no PEP (thread_atualizar_leitos_por_ip)
+document.getElementById('btnAtualizarDispositivos')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btnAtualizarDispositivos');
+    const textoOriginal = btn.innerHTML;
+
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Atualizando...';
+
+        const response = await fetch('/api/atualizar_dispositivos', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.status === 'ok') {
+            if (typeof mostrarToast === 'function') {
+                mostrarToast(`✅ ${data.mensagem} (${data.dispositivos} dispositivo(s))`, 'success');
+            }
+        } else {
+            throw new Error(data.mensagem || 'Erro ao atualizar dispositivos');
+        }
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        if (typeof mostrarToast === 'function') {
+            mostrarToast(`❌ ${error.message}`, 'danger');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+});
+
 // Botão "Atualizar setores" - VERSÃO COMPLETA COM DESATIVAÇÃO DO NOVO SETOR
 document.getElementById('btnAtualizarSetores')?.addEventListener('click', async () => {
     const btnAtualizar = document.getElementById('btnAtualizarSetores');
