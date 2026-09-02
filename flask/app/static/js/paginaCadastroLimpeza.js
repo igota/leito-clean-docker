@@ -336,6 +336,9 @@ function renderizarTabelaPaginada(limpezasPagina) {
             case "AGUARDANDO_VALIDACAO":
                 statusClass = "status-aguardando-validacao";
                 break;
+            case "SUSPENSO":
+                statusClass = "status-suspenso";
+                break;
         }
 
         let funcionario = item.funcionario_asg || item.funcionario_tec || '';

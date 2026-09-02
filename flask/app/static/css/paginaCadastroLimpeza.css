@@ -313,6 +313,16 @@ h2 {
     display: inline-block;
 }
 
+.status-suspenso {
+    background-color: #1e1e1e;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+}
+
 .modo-manual {
     background-color: #0d6efd;
     color: #fff;

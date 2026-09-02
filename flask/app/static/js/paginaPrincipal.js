@@ -154,7 +154,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (l.status === "AGUARDANDO_VALIDACAO") {
             return `<span class="status-indicator status-validacao"></span> Aguardando Validação`;
         }
-        
+
+        if (l.status === "SUSPENSO") {
+            return `<span class="status-indicator status-suspenso"></span> <i class="fas fa-lock"></i> Suspenso`;
+        }
+
         if (l.status === "CONCLUIDA") {
             if (!l.data_validacao) {
                 return `<span class="status-indicator status-concluida"></span> Concluída`;
@@ -309,7 +313,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         "EM_ANDAMENTO": "status-andamento-grid",
                         "CONCLUIDA": "status-concluida-grid",
                         "PENDENTE": "status-pendente-grid",
-                        "AGUARDANDO_VALIDACAO": "status-validacao-grid"
+                        "AGUARDANDO_VALIDACAO": "status-validacao-grid",
+                        "SUSPENSO": "status-suspenso-grid"
                     }[l.status] || "";
                     
                     const leito = document.createElement("div");
@@ -354,7 +359,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                         leito.title = `${l.dias_alerta || 0} dia(s) desde a limpeza`;
                     }
-                    
+
+                    // 🔒 Leito extra suspenso: sumiu do PEP antes de uma nova limpeza
+                    if (l.status === "SUSPENSO") {
+                        leito.title = "Leito suspenso — sumiu do sistema antes de uma nova limpeza";
+                        leito.insertAdjacentHTML('beforeend', '<span class="leito-badge badge-suspenso"><i class="fas fa-lock"></i></span>');
+                    }
+
                     gridLeitos.appendChild(leito);
                 });
                 
@@ -378,7 +389,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     "EM_ANDAMENTO": "status-andamento-grid",
                     "CONCLUIDA": "status-concluida-grid",
                     "PENDENTE": "status-pendente-grid",
-                    "AGUARDANDO_VALIDACAO": "status-validacao-grid"
+                    "AGUARDANDO_VALIDACAO": "status-validacao-grid",
+                    "SUSPENSO": "status-suspenso-grid"
                 }[l.status] || "";
                 
                 const leito = document.createElement("div");
@@ -429,7 +441,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     leito.title = `${l.dias_alerta || 0} dia(s) aguardando`;
                 }
-                
+
+                // 🔒 Leito extra suspenso: sumiu do PEP antes de uma nova limpeza
+                if (l.status === "SUSPENSO") {
+                    leito.title = "Leito suspenso — sumiu do sistema antes de uma nova limpeza";
+                    leito.insertAdjacentHTML('beforeend', '<span class="leito-badge badge-suspenso"><i class="fas fa-lock"></i></span>');
+                }
+
                 gridLeitos.appendChild(leito);
             });
             

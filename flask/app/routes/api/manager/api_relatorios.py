@@ -95,7 +95,8 @@ def dados_relatorio():
                     enf.nome as funcionario_enf,
                     rl.tempo_total_text,
                     rl.status,
-                    rl.vencimento
+                    rl.vencimento,
+                    rl.suspenso_desde
                 FROM registro_limpeza rl
                 LEFT JOIN funcionarios asg ON rl.funcionario_asg_id = asg.id
                 LEFT JOIN funcionarios asg_int ON rl.asg_intervalo = asg_int.id
@@ -147,6 +148,9 @@ def dados_relatorio():
 
             if d.get("vencimento"):
                 d["vencimento"] = d["vencimento"].strftime("%Y-%m-%d %H:%M:%S")
+
+            if d.get("suspenso_desde"):
+                d["suspenso_desde"] = d["suspenso_desde"].strftime("%Y-%m-%d %H:%M:%S")
 
             dados.append(d)
 

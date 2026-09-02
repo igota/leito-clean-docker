@@ -8,6 +8,7 @@
     --status-andamento: #ffa600;
     --status-pendente: #e74c3c;
     --status-validacao: #cccccc;
+    --status-suspenso: #6c7680;
     
     /* Cores de badges */
     --badge-5: #e0d100;
@@ -207,6 +208,11 @@
 .status-validacao .status-indicator { background-color: #757070; }
 .status-validacao:hover { background-color: rgba(70, 67, 67, 0.39); }
 
+/* Leito extra suspenso (sumiu do PEP) — linha meio apagada, sem chamar atenção */
+.status-suspenso { background-color: rgba(108, 118, 128, 0.08); opacity: 0.6; }
+.status-suspenso .status-indicator { background-color: var(--status-suspenso); }
+.status-suspenso:hover { background-color: rgba(108, 118, 128, 0.16); }
+
 /* ============================================
    📊 STATUS PROGRESS - BARRINHAS
    ============================================ */
@@ -301,6 +307,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
+    justify-content: center;  /* ← Adicione esta linha */
+    align-items: center;      /* ← Opcional: centraliza verticalmente */
 }
 
 /* Cards de leito - Versão otimizada */
@@ -327,6 +335,13 @@
 .status-concluida-grid { background-color: var(--status-concluida); }
 .status-andamento-grid { background-color: var(--status-andamento); color: #000; }
 .status-validacao-grid { background-color: var(--status-validacao); color: #000; }
+
+/* Leito extra suspenso (sumiu do PEP) — card meio apagado, sem animação */
+.status-suspenso-grid {
+    background-color: var(--status-suspenso);
+    opacity: 0.5;
+    color: #fff;
+}
 
 .cronometro-tooltip {
     display: none;
@@ -419,6 +434,15 @@
 .badge-7dias {
     background-color: var(--badge-7);
     animation: badgePulse 1.5s infinite ease-in-out;
+}
+
+/* Cadeado minimalista do leito suspenso — sem pulso, não é um alerta */
+.badge-suspenso {
+    background-color: rgba(30, 34, 40, 0.85);
+    color: #fff;
+    font-size: 14px;
+    min-width: 26px;
+    height: 26px;
 }
 
 @keyframes badgePulse {

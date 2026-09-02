@@ -353,6 +353,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 const proxima = lista[i + 1];
                 const validacaoProxima = proxima ? parseDataHora(proxima.data_validacao) : null;
 
+                // Leito extra suspenso (sumiu do PEP): a responsabilidade desse
+                // registro pelo atraso termina no momento da suspensão — o tempo
+                // parado fora do sistema (ou até uma limpeza nova, bem depois)
+                // não conta contra ele. Suspensão é terminal (não retoma).
+                const suspensoDesde = registro.suspenso_desde ? parseDataHora(registro.suspenso_desde) : null;
+
+                if (suspensoDesde) {
+                    if (suspensoDesde > vencimento) {
+                        vencidaResolvida++;
+                        const seg = (suspensoDesde - vencimento) / 1000;
+                        atrasosSeg.push(seg);
+                        registrarAtraso(seg);
+                    } else {
+                        noPrazo++; // suspendeu antes mesmo de vencer
+                    }
+                    return;
+                }
+
                 if (validacaoProxima) {
                     if (validacaoProxima <= vencimento) {
                         noPrazo++;
