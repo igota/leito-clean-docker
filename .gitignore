@@ -19,3 +19,8 @@ Thumbs.db
 
 # Dumps/scratch locais
 page_dump.txt
+
+# Documentação interna confidencial e config com IPs reais da rede hospitalar
+# (removidos do histórico do git em 2026-09-04 antes de tornar o repo público)
+docs/Leito_Clean_Documentacao_Tecnica.pdf
+nginx-windows-relay/
