@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, url_for
 import threading
 import logging
+import os
 
 
 # Imports relativos
@@ -53,6 +54,20 @@ def create_app():
     app.template_filter('datetimeformat')(helpers.datetimeformat)
     app.context_processor(helpers.inject_user)
     app.before_request(helpers.controle_sessao)
+
+    # ================================
+    # 🗂️ CACHE-BUSTING DE ARQUIVOS ESTÁTICOS
+    # ================================
+    def versionar_static(endpoint, **values):
+        if endpoint == 'static':
+            filename = values.get('filename')
+            if filename:
+                file_path = os.path.join(app.static_folder, filename)
+                if os.path.exists(file_path):
+                    values['v'] = int(os.path.getmtime(file_path))
+        return url_for(endpoint, **values)
+
+    app.jinja_env.globals['url_for'] = versionar_static
 
     # ================================
     # 📦 BLUEPRINTS
