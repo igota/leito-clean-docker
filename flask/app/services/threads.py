@@ -8,6 +8,7 @@ from ..services.integracao_vitae import buscar_ips_e_setores_ativos, login_e_bus
 from ..services.atualiza_pendentes import atualiza_pendentes
 from ..config.settings import LEITOS_CACHE_FILE, INTERVALO_ATUALIZACAO
 from ..database.conexao import get_db_connection
+from ..utils.distributed_lock import adquirir_lock_ciclo
 
 
 atualizar_leitos_lock = threading.Lock()
@@ -125,11 +126,15 @@ def atualizar_leitos_por_ip_uma_vez():
 def thread_atualizar_leitos_por_ip():
     while True:
         try:
-            # Bloqueante: se uma chamada manual estiver em andamento, aguarda
-            # ela terminar antes de rodar o próprio ciclo (evita escrita concorrente
-            # no mesmo arquivo .tmp do cache).
-            with atualizar_leitos_lock:
-                atualizar_leitos_por_ip_uma_vez()
+            # Reserva o ciclo via Redis: se houver mais de um worker do gunicorn
+            # rodando essa thread, só um deles efetivamente loga no Vitae e
+            # escreve o cache neste ciclo (evita logins/scraping duplicados).
+            if adquirir_lock_ciclo("atualizar_leitos_por_ip", INTERVALO_ATUALIZACAO):
+                # Bloqueante: se uma chamada manual estiver em andamento, aguarda
+                # ela terminar antes de rodar o próprio ciclo (evita escrita concorrente
+                # no mesmo arquivo .tmp do cache).
+                with atualizar_leitos_lock:
+                    atualizar_leitos_por_ip_uma_vez()
         except Exception as e:
             logging.error(f"❌ Erro na thread de atualização: {e}")
 

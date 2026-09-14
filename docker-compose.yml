@@ -58,6 +58,7 @@ services:
     environment:
       IS_DOCKER: ${IS_DOCKER}
       FLASK_ENV: ${FLASK_ENV}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-1}
 
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306

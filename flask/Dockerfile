@@ -33,4 +33,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["gunicorn", "-k", "gthread", "--threads", "40", "--workers", "1", "--bind", "0.0.0.0:8000", "app:create_app()"]
+CMD ["sh", "-c", "gunicorn -k gthread --threads 40 --workers ${GUNICORN_WORKERS:-1} --bind 0.0.0.0:8000 app:create_app()"]

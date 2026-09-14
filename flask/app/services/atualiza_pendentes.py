@@ -5,10 +5,15 @@ from .notificacao_email import enviar_notificacoes_lote
 
 from ..database.conexao import get_db_connection
 from ..config.settings import INTERVALO_ATUALIZACAO
+from ..utils.distributed_lock import adquirir_lock_ciclo
 
 
 def atualiza_pendentes():
     while True:
+        if not adquirir_lock_ciclo("atualiza_pendentes", INTERVALO_ATUALIZACAO):
+            time.sleep(INTERVALO_ATUALIZACAO)
+            continue
+
         try:
             conn = get_db_connection()
             with conn.cursor() as cursor:
