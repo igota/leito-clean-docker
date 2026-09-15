@@ -1,4 +1,4 @@
-# 🏥 Leito Clean — Sistema de Gestão de Limpeza de Leitos Hospitalares
+# Leito Clean — Sistema de Gestão de Limpeza de Leitos Hospitalares
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.1-000000.svg)](https://flask.palletsprojects.com/)
